@@ -25,6 +25,7 @@ jobs:
         uses: circt/install-circt@v1.1.1
         with:
           version: 'firtool-1.40.0'
+          file-name: 'firrtl-bin-ubuntu-20.04.tar.gz'
       - name: SBT Test
         run: sbt test
       - name: mill Test
