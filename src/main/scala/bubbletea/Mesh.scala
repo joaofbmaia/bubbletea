@@ -2,6 +2,13 @@ package bubbletea
 
 import chisel3._
 
+class MeshData[T <: Data](config: AcceleratorConfig[T]) extends Bundle {
+  val north = Vec(config.meshColumns, config.dataType)
+  val south = Vec(config.meshColumns, config.dataType)
+  val west = Vec(config.meshRows, config.dataType)
+  val east = Vec(config.meshRows, config.dataType)
+}
+
 class Mesh[T <: Data](config: AcceleratorConfig[T]) extends Module {
   val io = IO(new Bundle {
     // sequencer IO
@@ -9,25 +16,18 @@ class Mesh[T <: Data](config: AcceleratorConfig[T]) extends Module {
     val sequencerReset = Input(Bool())
 
     // mesh IO
-    val inN = Input(Vec(config.meshColumns, config.dataType))
-    val inS = Input(Vec(config.meshColumns, config.dataType))
-    val inW = Input(Vec(config.meshRows, config.dataType))
-    val inE = Input(Vec(config.meshRows, config.dataType))
-
-    val outN = Output(Vec(config.meshColumns, config.dataType))
-    val outS = Output(Vec(config.meshColumns, config.dataType))
-    val outW = Output(Vec(config.meshRows, config.dataType))
-    val outE = Output(Vec(config.meshRows, config.dataType))
+    val in = Input(new MeshData(config))
+    val out = Output(new MeshData(config))
 
     // reconfiguration
     val rcfgStart = Input(Bool())
     val rcfgDone = Output(Bool())
   })
 
-  io.outN := io.inN
-  io.outS := io.inS
-  io.outW := io.inW
-  io.outE := io.inE
+  io.out.north := io.in.north
+  io.out.south := io.in.south
+  io.out.west := io.in.west
+  io.out.east := io.in.east
 
   io.rcfgDone := true.B
 }
