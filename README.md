@@ -76,7 +76,7 @@ sbt test
 
 Alternatively, if you use Mill:
 ```sh
-mill %NAME%.test
+mill bubbletea.test
 ```
 
 You should see a whole bunch of output that ends with something like the following lines
