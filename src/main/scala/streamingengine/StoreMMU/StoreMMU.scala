@@ -1,6 +1,7 @@
+package streamingengine
+
 import chisel3._
 import chisel3.util._
-import chisel3.stage.ChiselStage
 
 
 
@@ -420,7 +421,7 @@ extends Module {
 						sq_valid_reg(store_ptr_idx)
 
 	/* Obtain the address tag and the offset within the data row */
-	next_addr 	  	 := sf_reg(store_sel_idx).addressFIFO(store_r_addr_ptr).address.asUInt()
+	next_addr 	  	 := sf_reg(store_sel_idx).addressFIFO(store_r_addr_ptr).address.asUInt
 	next_addr_tag 	 := next_addr >> AXI_W_OFFSET_WIDTH
 	next_addr_offset := next_addr(AXI_W_OFFSET_WIDTH - 1, 0)
 
@@ -803,39 +804,5 @@ extends Module {
     io.hpc_smmu_commit := hpc_smmu_commit
     io.hpc_smmu_stall  := hpc_smmu_stall
 	io.hpc_ops_store   := hpc_ops_store
-
-}
-
-
-
-
-
-/**
-  * Verilog generator application
-  */
-object StoreMMU_Verilog extends App {
-
-    /* Define the parameters */
-    val SMMU_NUM_TABLES    = 4
-    val SMMU_NUM_ADDRESSES = 64
-    val STREAM_ID_WIDTH	   = 5
-    val ADDRESS_WIDTH      = 32
-    val VEC_NUM_BYTES      = 32
-    val AXI_W_DATA_WIDTH   = 128
-
-    
-    val path = "output/StoreMMU/"
-
-    
-    /* Generate verilog */
-    (new ChiselStage).emitVerilog(
-        new StoreMMU(
-            SMMU_NUM_TABLES,
-            SMMU_NUM_ADDRESSES,
-            STREAM_ID_WIDTH,
-            ADDRESS_WIDTH, 
-            VEC_NUM_BYTES,    
-            AXI_W_DATA_WIDTH),
-        Array("--target-dir", path))
 
 }

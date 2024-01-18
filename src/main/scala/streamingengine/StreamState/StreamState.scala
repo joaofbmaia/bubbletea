@@ -1,6 +1,7 @@
+package streamingengine
+
 import chisel3._
 import chisel3.util._
-import chisel3.stage.ChiselStage
 
 
 
@@ -632,7 +633,7 @@ extends Module {
     mmu_out_mmu_idx    := st.mmu_idx
 
     mmu_out_addr       := st.dimensions(0).acc_offset
-    mmu_out_addr_valid := st.active_dim(0) && st.dimensions(0).acc_size.asSInt() > 0.S && st.dimensions(0).acc_offset.asSInt() >= 0.S && st.ready
+    mmu_out_addr_valid := st.active_dim(0) && st.dimensions(0).acc_size.asSInt > 0.S && st.dimensions(0).acc_offset.asSInt >= 0.S && st.ready
 
     
     for (i <- 0 until STREAM_NUM_DIMS) {
@@ -1184,41 +1185,5 @@ extends Module {
     io.mmu_out_type       := mmu_out_type
 
     io.hpc_ss_desc := hpc_ss_desc
-
-}
-
-
-
-
-
-/**
-  * Verilog generator application
-  */
-object StreamState_Verilog extends App {
-
-    /* Define the parameters */
-    val STREAM_NUM_DIMS     = 4
-    val STREAM_NUM_MODS     = 3
-    val SS_NUM_TABLES       = 4
-    val STREAM_OFFSET_WIDTH	= 32
-    val STREAM_STRIDE_WIDTH = 32
-    val STREAM_SIZE_WIDTH   = 32
-    val STREAM_ID_WIDTH     = 5
-
-    
-    val path = "output/StreamState/"
-
-    
-    /* Generate verilog */
-    (new ChiselStage).emitVerilog(
-        new StreamState(
-            STREAM_NUM_DIMS,
-            STREAM_NUM_MODS,
-            SS_NUM_TABLES,
-            STREAM_OFFSET_WIDTH,
-            STREAM_STRIDE_WIDTH, 
-            STREAM_SIZE_WIDTH,    
-            STREAM_ID_WIDTH),
-        Array("--target-dir", path))
 
 }

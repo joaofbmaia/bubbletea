@@ -1,6 +1,7 @@
+package streamingengine
+
 import chisel3._
 import chisel3.util._
-import chisel3.stage.ChiselStage
 
 
 
@@ -579,43 +580,5 @@ extends Module {
     io.rs_out_vecdata   := rs_out_vecdata
     io.rs_out_predicate := rs_out_predicate
     io.rs_out_completed := rs_out_completed
-
-}
-
-
-
-
-
-/**
-  * Verilog generator application
-  */
-object LoadFIFO_Verilog extends App {
-
-    /* Define the parameters */
-    val STREAM_NUM_DIMS  = 8
-    val STREAM_ID_WIDTH  = 5
-    val VEC_NUM_BYTES	 = 32
-    val LF_NUM_TABLES    = 4
-    val LF_NUM_BYTES     = 32
-    val LLB_NUM_BYTES    = 32
-    val ADDRESS_WIDTH    = 32
-    val NUM_SRC_OPERANDS = 2
-    
-
-    val path = "output/LoadFIFO/"
-
-    
-    /* Generate verilog */
-    (new ChiselStage).emitVerilog(
-        new LoadFIFO(
-            STREAM_NUM_DIMS,
-            STREAM_ID_WIDTH,
-            VEC_NUM_BYTES,
-            LF_NUM_TABLES, 
-            LF_NUM_BYTES,    
-            LLB_NUM_BYTES,
-            ADDRESS_WIDTH,
-            NUM_SRC_OPERANDS),
-        Array("--target-dir", path))
 
 }

@@ -1,6 +1,7 @@
+package streamingengine
+
 import chisel3._
 import chisel3.util._
-import chisel3.stage.ChiselStage
 
 
 
@@ -576,39 +577,5 @@ extends Module {
     io.se_out_mod_behaviour     := se_out_mod_behaviour
     io.se_out_mod_displacement  := se_out_mod_displacement
     io.se_out_mod_size          := se_out_mod_size
-
-}
-
-
-
-
-
-/**
-  * Verilog generator application
-  */
-object StreamConfiguration_Verilog extends App {
-
-    /* Define the parameters */
-    val STREAM_NUM_DIMS     = 4
-    val STREAM_NUM_MODS     = 3
-    val STREAM_OFFSET_WIDTH	= 32
-    val STREAM_STRIDE_WIDTH = 32
-    val STREAM_SIZE_WIDTH   = 32
-    val STREAM_ID_WIDTH     = 5
-
-    
-    val path = "output/StreamConfiguration/"
-
-    
-    /* Generate verilog */
-    (new ChiselStage).emitVerilog(
-        new StreamConfiguration(
-            STREAM_NUM_DIMS,
-            STREAM_NUM_MODS,
-            STREAM_OFFSET_WIDTH,
-            STREAM_STRIDE_WIDTH, 
-            STREAM_SIZE_WIDTH,    
-            STREAM_ID_WIDTH),
-        Array("--target-dir", path))
 
 }

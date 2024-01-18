@@ -1,6 +1,7 @@
+package streamingengine
+
 import chisel3._
 import chisel3.util._
-import chisel3.stage.ChiselStage
 
 
 
@@ -289,51 +290,5 @@ extends Module {
     io.hpc_lmmu_stall_lrq := hpc_lmmu_stall_lrq
     io.hpc_lmmu_stall_llb := LRQ.io.hpc_lmmu_stall_llb
     io.hpc_ops_load       := LLB.io.hpc_ops_load
-
-}
-
-
-
-
-
-/**
-  * Verilog generator application
-  */
-object LoadMMU_Verilog extends App {
-
-    /* Define the parameters */
-    val STREAM_NUM_DIMS  = 4
-    val STREAM_ID_WIDTH  = 5
-    val VEC_NUM_BYTES    = 16
-    val LRQ_NUM_TABLES   = 16
-    val LRQ_NUM_REQUESTS = 8
-    val LLB_NUM_TABLES   = 4
-    val LLB_NUM_BYTES    = 32
-    val LF_NUM_TABLES    = 4
-    val LF_NUM_BYTES     = 16
-    val ADDRESS_WIDTH    = 32
-    val AXI_R_DATA_WIDTH = 128
-    val NUM_SRC_OPERANDS = 2
-
-    
-    val path = "output/LoadMMU/"
-
-    
-    /* Generate verilog */
-    (new ChiselStage).emitVerilog(
-        new LoadMMU(
-            STREAM_NUM_DIMS,
-            STREAM_ID_WIDTH,
-            VEC_NUM_BYTES,
-            LRQ_NUM_TABLES,
-            LRQ_NUM_REQUESTS, 
-            LLB_NUM_TABLES,
-            LLB_NUM_BYTES, 
-            LF_NUM_TABLES,
-            LF_NUM_BYTES,
-            ADDRESS_WIDTH,
-            AXI_R_DATA_WIDTH,
-            NUM_SRC_OPERANDS),
-        Array("--target-dir", path))
 
 }

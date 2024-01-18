@@ -1,6 +1,7 @@
+package streamingengine
+
 import chisel3._
 import chisel3.util._
-import chisel3.stage.ChiselStage
 
 
 
@@ -228,7 +229,7 @@ extends Module {
 
 
             /* Reassignment of AXI internal signals */
-            axi_ar_addr  := llb_reg(arbiter_dm_output).address_tag.asUInt() << LLB_OFFSET_WIDTH
+            axi_ar_addr  := llb_reg(arbiter_dm_output).address_tag.asUInt << LLB_OFFSET_WIDTH
             axi_ar_valid := llb_reg(arbiter_dm_output).config && !llb_reg(arbiter_dm_output).valid
             axi_r_ready  := false.B
 
@@ -389,37 +390,5 @@ extends Module {
     io.axi_r_ready  := axi_r_ready
 
     io.hpc_ops_load := hpc_ops_load
-
-}
-
-
-
-
-
-/**
-  * Verilog generator application
-  */
-object LoadLineBuffer_Verilog extends App {
-
-    /* Define the parameters */
-    val LLB_NUM_TABLES    = 8
-    val LLB_NUM_BYTES     = 5
-    val ADDRESS_WIDTH	  = 32
-    val ADDRESS_TAG_WIDTH = 4
-    val AXI_R_DATA_WIDTH  = 32
-
-
-    val path = "output/LoadLineBuffer/"
-
-    
-    /* Generate verilog */
-    (new ChiselStage).emitVerilog(
-        new LoadLineBuffer(
-            LLB_NUM_TABLES,
-            LLB_NUM_BYTES,
-            ADDRESS_WIDTH,
-            ADDRESS_TAG_WIDTH, 
-            AXI_R_DATA_WIDTH),
-        Array("--target-dir", path))
 
 }

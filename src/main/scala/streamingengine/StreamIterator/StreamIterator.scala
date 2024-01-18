@@ -1,7 +1,7 @@
+package streamingengine
+
 import chisel3._
 import chisel3.util._
-import chisel3.stage.ChiselStage
-
 
 
 
@@ -79,7 +79,7 @@ extends Module {
 
 
     /* The current number of iterations is by default decremented */
-    next_iterations   := io.val_iterations.asSInt() - 1.S
+    next_iterations   := io.val_iterations.asSInt - 1.S
     next_accumulation := DontCare
 
 
@@ -121,8 +121,8 @@ extends Module {
 
 
     /* Converting the input source operands to signed representations */
-    src_op1 := io.src_op1.asSInt()
-    src_op2 := io.src_op2.asSInt()
+    src_op1 := io.src_op1.asSInt
+    src_op2 := io.src_op2.asSInt
 
     
 
@@ -134,14 +134,14 @@ extends Module {
      */
     when (!io.val_mod) {
         switch(io.val_width) {
-            is("b00".U) {src_op2 := io.src_op2.asSInt()}        // 1-byte elements
-            is("b01".U) {src_op2 := io.src_op2.asSInt() << 1}   // 2-byte elements
-            is("b10".U) {src_op2 := io.src_op2.asSInt() << 2}   // 4-byte elements
-            is("b11".U) {src_op2 := io.src_op2.asSInt() << 3}   // 8-byte elements
+            is("b00".U) {src_op2 := io.src_op2.asSInt}        // 1-byte elements
+            is("b01".U) {src_op2 := io.src_op2.asSInt << 1}   // 2-byte elements
+            is("b10".U) {src_op2 := io.src_op2.asSInt << 2}   // 4-byte elements
+            is("b11".U) {src_op2 := io.src_op2.asSInt << 3}   // 8-byte elements
         }
     }
     .otherwise {
-        src_op2 := io.src_op2.asSInt()
+        src_op2 := io.src_op2.asSInt
     }
 
 
@@ -173,37 +173,7 @@ extends Module {
     io.load_ena := load_ena
     io.load_dim := next_dim_oh
 
-    io.res_accumulation := next_accumulation.asUInt()
-    io.res_iterations   := next_iterations.asUInt()
-
-}
-
-
-
-
-
-/**
-  * Verilog generator application
-  */
-object StreamIterator_Verilog extends App {
-
-    /* Define the parameters */
-    val STREAM_NUM_DIMS     = 4
-    val STREAM_OFFSET_WIDTH	= 32
-    val STREAM_STRIDE_WIDTH = 32
-    val STREAM_SIZE_WIDTH   = 32
-
-    
-    val path = "output/StreamIterator/"
-
-    
-    /* Generate verilog */
-    (new ChiselStage).emitVerilog(
-        new StreamIterator(
-            STREAM_NUM_DIMS,
-            STREAM_OFFSET_WIDTH,
-            STREAM_STRIDE_WIDTH,
-            STREAM_SIZE_WIDTH),
-        Array("--target-dir", path))
+    io.res_accumulation := next_accumulation.asUInt
+    io.res_iterations   := next_iterations.asUInt
 
 }

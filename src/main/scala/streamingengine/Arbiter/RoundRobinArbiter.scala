@@ -1,6 +1,7 @@
+package streamingengine
+
 import chisel3._
 import chisel3.util._
-import chisel3.stage.ChiselStage
 
 
 
@@ -73,28 +74,5 @@ extends Module {
 
     /* Connect the output port to the selected bit */
     io.output := state_current
-
-}
-
-
-
-
-
-/**
-  * Verilog generator application
-  */
-object RoundRobinArbiter_Verilog extends App {
-
-    /* Define parameters */
-    val INPUT_WIDTH = 32
-
-    
-    val path = "output/RoundRobinArbiter/"
-
-
-    /* Generate verilog */
-    (new ChiselStage).emitVerilog(
-        new RoundRobinArbiter(INPUT_WIDTH),
-        Array("--target-dir", path))
 
 }
