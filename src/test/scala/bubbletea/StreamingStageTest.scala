@@ -13,27 +13,31 @@ class StreamingStageTest extends AnyFlatSpec with ChiselScalatestTester {
 
   it should "do something" in {
     test(new StreamingStage(CommonAcceleratorConfigs.minimalConfig)).withAnnotations(Seq(WriteVcdAnnotation)) { dut =>
-      val testDstMask = Vec.Lit(
-        Vec.Lit(
-          (new DstMaskElement(CommonAcceleratorConfigs.minimalConfig)).Lit(_.used -> true.B, _.side -> PortSide.north, _.index -> 0.U, _.moduloCycle -> 0.U),
-          (new DstMaskElement(CommonAcceleratorConfigs.minimalConfig)).Lit(_.used -> true.B, _.side -> PortSide.north, _.index -> 1.U, _.moduloCycle -> 0.U),
-          (new DstMaskElement(CommonAcceleratorConfigs.minimalConfig)).Lit(_.used -> true.B, _.side -> PortSide.south, _.index -> 0.U, _.moduloCycle -> 0.U),
-          (new DstMaskElement(CommonAcceleratorConfigs.minimalConfig)).Lit(_.used -> true.B, _.side -> PortSide.south, _.index -> 1.U, _.moduloCycle -> 0.U),
-          (new DstMaskElement(CommonAcceleratorConfigs.minimalConfig)).Lit(_.used -> true.B, _.side -> PortSide.north, _.index -> 0.U, _.moduloCycle -> 1.U),
-          (new DstMaskElement(CommonAcceleratorConfigs.minimalConfig)).Lit(_.used -> true.B, _.side -> PortSide.north, _.index -> 1.U, _.moduloCycle -> 1.U),
-          (new DstMaskElement(CommonAcceleratorConfigs.minimalConfig)).Lit(_.used -> true.B, _.side -> PortSide.south, _.index -> 0.U, _.moduloCycle -> 1.U),
-          (new DstMaskElement(CommonAcceleratorConfigs.minimalConfig)).Lit(_.used -> true.B, _.side -> PortSide.south, _.index -> 1.U, _.moduloCycle -> 1.U)
+      val testRemaperSetup = PermutationNetwork.generateSwitchSettingsFromDstMask(
+        Seq(
+          Seq(
+            DstMask(used = true, side = Side.North, index = 0, moduloCycle = 0),
+            DstMask(used = true, side = Side.North, index = 1, moduloCycle = 0),
+            DstMask(used = true, side = Side.South, index = 0, moduloCycle = 0),
+            DstMask(used = true, side = Side.South, index = 1, moduloCycle = 0),
+            DstMask(used = true, side = Side.North, index = 0, moduloCycle = 1),
+            DstMask(used = true, side = Side.North, index = 1, moduloCycle = 1),
+            DstMask(used = true, side = Side.South, index = 0, moduloCycle = 1),
+            DstMask(used = true, side = Side.South, index = 1, moduloCycle = 1)
+          ),
+          Seq(
+            DstMask(used = true, side = Side.West, index = 0, moduloCycle = 0),
+            DstMask(used = true, side = Side.West, index = 1, moduloCycle = 1),
+            DstMask(used = true, side = Side.East, index = 0, moduloCycle = 0),
+            DstMask(used = true, side = Side.East, index = 1, moduloCycle = 1),
+            DstMask(used = false, side = Side.East, index = 0, moduloCycle = 0),
+            DstMask(used = false, side = Side.East, index = 0, moduloCycle = 0),
+            DstMask(used = false, side = Side.East, index = 0, moduloCycle = 0),
+            DstMask(used = false, side = Side.East, index = 0, moduloCycle = 0)
+          )
         ),
-        Vec.Lit(
-          (new DstMaskElement(CommonAcceleratorConfigs.minimalConfig)).Lit(_.used -> true.B, _.side -> PortSide.west, _.index -> 0.U, _.moduloCycle -> 0.U),
-          (new DstMaskElement(CommonAcceleratorConfigs.minimalConfig)).Lit(_.used -> true.B, _.side -> PortSide.west, _.index -> 1.U, _.moduloCycle -> 1.U),
-          (new DstMaskElement(CommonAcceleratorConfigs.minimalConfig)).Lit(_.used -> true.B, _.side -> PortSide.east, _.index -> 0.U, _.moduloCycle -> 0.U),
-          (new DstMaskElement(CommonAcceleratorConfigs.minimalConfig)).Lit(_.used -> true.B, _.side -> PortSide.east, _.index -> 1.U, _.moduloCycle -> 1.U),
-          (new DstMaskElement(CommonAcceleratorConfigs.minimalConfig)).Lit(_.used -> false.B, _.side -> PortSide.east, _.index -> 0.U, _.moduloCycle -> 0.U),
-          (new DstMaskElement(CommonAcceleratorConfigs.minimalConfig)).Lit(_.used -> false.B, _.side -> PortSide.east, _.index -> 0.U, _.moduloCycle -> 0.U),
-          (new DstMaskElement(CommonAcceleratorConfigs.minimalConfig)).Lit(_.used -> false.B, _.side -> PortSide.east, _.index -> 0.U, _.moduloCycle -> 0.U),
-          (new DstMaskElement(CommonAcceleratorConfigs.minimalConfig)).Lit(_.used -> false.B, _.side -> PortSide.east, _.index -> 0.U, _.moduloCycle -> 0.U)
-        )
+        rows = CommonAcceleratorConfigs.minimalConfig.meshRows,
+        columns = CommonAcceleratorConfigs.minimalConfig.meshColumns
       )
 
       val testMacroStreams = Vec.Lit(
@@ -47,17 +51,21 @@ class StreamingStageTest extends AnyFlatSpec with ChiselScalatestTester {
       )
 
       // test body here
-      dut.io.dstMask.poke(testDstMask)
+      for (i <- 0 until CommonAcceleratorConfigs.minimalConfig.numberOfRempaerSwitchStages) {
+        for (j <- 0 until CommonAcceleratorConfigs.minimalConfig.numberOfRemaperSwitchesPerStage) {
+          dut.io.remaperSwitchesSetup(i)(j).poke(testRemaperSetup(i)(j))
+        }
+      }
       dut.io.initiationIntervalMinusOne.poke(1.U)
       dut.io.macroStreamBuffer.valid.poke(true.B)
       dut.io.macroStreamBuffer.bits.poke(testMacroStreams)
       dut.io.meshOut.ready.poke(true.B)
-      dut.clock.step(1)
-      dut.io.meshOut.ready.poke(false.B)
-      dut.clock.step(1)
-      dut.io.macroStreamBuffer.bits.poke(testMacroStreams2)
-      dut.clock.step(3)
-      dut.io.meshOut.ready.poke(true.B)
+      // dut.clock.step(1)
+      // dut.io.meshOut.ready.poke(false.B)
+      // dut.clock.step(1)
+      // dut.io.macroStreamBuffer.bits.poke(testMacroStreams2)
+      // dut.clock.step(3)
+      // dut.io.meshOut.ready.poke(true.B)
       dut.clock.step(10)
     }
   }

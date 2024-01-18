@@ -1,6 +1,7 @@
 package bubbletea
 
 import chisel3._
+import chisel3.util.log2Ceil
 
 case class AcceleratorConfig[T <: Data](
   dataType:    T,
@@ -11,6 +12,9 @@ case class AcceleratorConfig[T <: Data](
 ) {
   val maxMicroStreams: Int = (2 * meshRows + 2 * meshColumns) * maxInitiationInterval
   val macroStreamDepth: Int = maxMicroStreams / maxMacroStreams
+  val numberOfRemaperElements: Int = maxMacroStreams * macroStreamDepth
+  val numberOfRempaerSwitchStages: Int = 2 * log2Ceil(numberOfRemaperElements) - 1
+  val numberOfRemaperSwitchesPerStage: Int = numberOfRemaperElements / 2
 
   override def toString: String = 
     s"AcceleratorConfig(\n  dataType = $dataType,\n  meshRows = $meshRows,\n  meshColumns = $meshColumns,\n  maxInitiationInterval = $maxInitiationInterval,\n  maxMacroStreams = $maxMacroStreams,\n  maxMicroStreams = $maxMicroStreams,\n  macroStreamDepth = $macroStreamDepth\n)"

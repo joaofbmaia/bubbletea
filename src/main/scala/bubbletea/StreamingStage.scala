@@ -6,27 +6,17 @@ import scala.math.max
 import chisel3.util.Decoupled
 import chisel3.util.RegEnable
 
-object PortSide extends ChiselEnum {
-  val north, south, west, east = Value
-}
-
-class DstMaskElement[T <: Data](config: AcceleratorConfig[T]) extends Bundle {
-  val used = Bool()
-  val side = PortSide()
-  val index = UInt(log2Ceil(max(config.meshRows, config.meshColumns)).W)
-  val moduloCycle = UInt(log2Ceil(config.maxInitiationInterval).W)
-}
-
 object StreamRemaper {
   val latency = 1
 }
 
 class StreamRemaper[T <: Data](config: AcceleratorConfig[T]) extends Module {
   import StreamRemaper._
+  assert(config.maxMacroStreams * config.macroStreamDepth == config.maxInitiationInterval * (2 * config.meshRows + 2 * config.meshColumns), "Number of macro stream elements must equal number of micro stream elements")
   val io = IO(new Bundle {
     val macroStreamsIn = Flipped(Decoupled(Vec(config.maxMacroStreams, Vec(config.macroStreamDepth, config.dataType))))
     val microStreamsOut = Decoupled(Vec(config.maxInitiationInterval, new MeshData(config)))
-    val dstMask = Input(Vec(config.maxMacroStreams, Vec(config.macroStreamDepth, new DstMaskElement(config))))
+    val remaperSwitchesSetup = Input(Vec(config.numberOfRempaerSwitchStages, Vec(config.numberOfRemaperSwitchesPerStage, Bool())))
   })
 
   val macroStreams = io.macroStreamsIn.bits
@@ -37,27 +27,11 @@ class StreamRemaper[T <: Data](config: AcceleratorConfig[T]) extends Module {
   val downstreamValid = Wire(Bool())
   val downstreamReady = Wire(Bool())
 
-  // default assignment
-  microStreams := DontCare
+  val permutationNetwork = Module(new BenesPermutationNetwork(config.dataType, config.numberOfRemaperElements))
 
-  for (i <- 0 until config.maxMacroStreams) {
-    for (j <- 0 until config.macroStreamDepth) {
-      when (io.dstMask(i)(j).used) {
-        when (io.dstMask(i)(j).side === PortSide.north) {
-          microStreams(io.dstMask(i)(j).moduloCycle).north(io.dstMask(i)(j).index) := macroStreams(i)(j)
-        }
-        when (io.dstMask(i)(j).side === PortSide.south) {
-          microStreams(io.dstMask(i)(j).moduloCycle).south(io.dstMask(i)(j).index) := macroStreams(i)(j)
-        }
-        when (io.dstMask(i)(j).side === PortSide.west) {
-          microStreams(io.dstMask(i)(j).moduloCycle).west(io.dstMask(i)(j).index) := macroStreams(i)(j)
-        }
-        when (io.dstMask(i)(j).side === PortSide.east) {
-          microStreams(io.dstMask(i)(j).moduloCycle).east(io.dstMask(i)(j).index) := macroStreams(i)(j)
-        }
-      }
-    }
-  }
+  permutationNetwork.io.in := macroStreams.asTypeOf(Vec(config.numberOfRemaperElements, config.dataType))
+  permutationNetwork.io.select := io.remaperSwitchesSetup
+  microStreams := permutationNetwork.io.out.asTypeOf(microStreams)
 
   // Registered Hadshake Protocol
   // https://www.itdev.co.uk/blog/pipelining-axi-buses-registered-ready-signals
@@ -73,12 +47,13 @@ class StreamRemaper[T <: Data](config: AcceleratorConfig[T]) extends Module {
 
 
 class StreamingStage[T <: Data](config: AcceleratorConfig[T]) extends Module {
+  assert(config.maxMacroStreams * config.macroStreamDepth == config.maxInitiationInterval * (2 * config.meshRows + 2 * config.meshColumns), "Number of macro stream elements must equal number of micro stream elements")
   val io = IO(new Bundle {
     val macroStreamBuffer = Flipped(Decoupled((Vec(config.maxMacroStreams, Vec(config.macroStreamDepth, config.dataType)))))
     val meshOut = Decoupled(new MeshData(config))
 
     val initiationIntervalMinusOne = Input(UInt(log2Ceil(config.maxInitiationInterval).W))
-    val dstMask = Input(Vec(config.maxMacroStreams, Vec(config.macroStreamDepth, new DstMaskElement(config))))
+    val remaperSwitchesSetup = Input(Vec(config.numberOfRempaerSwitchStages, Vec(config.numberOfRemaperSwitchesPerStage, Bool())))
   })
 
   val currentModuloCycle = RegInit(0.U(log2Ceil(config.maxInitiationInterval).W))
@@ -99,6 +74,6 @@ class StreamingStage[T <: Data](config: AcceleratorConfig[T]) extends Module {
   
   remaper.io.microStreamsOut.ready := io.meshOut.fire && (currentModuloCycle === io.initiationIntervalMinusOne)
 
-  remaper.io.dstMask := io.dstMask
+  remaper.io.remaperSwitchesSetup := io.remaperSwitchesSetup
 
 }
