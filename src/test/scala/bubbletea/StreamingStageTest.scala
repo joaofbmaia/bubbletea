@@ -9,9 +9,7 @@ import chisel3.experimental.VecLiterals._
 import chisel3.experimental.BundleLiterals._
 
 class StreamingStageTest extends AnyFlatSpec with ChiselScalatestTester {
-  behavior of "StreamingStage"
-
-  it should "do something" in {
+  "StreamingStage" should "do something" in {
     test(new StreamingStage(CommonAcceleratorConfigs.minimalConfig)).withAnnotations(Seq(WriteVcdAnnotation)) { dut =>
       val testRemaperSetup = PermutationNetwork.generateSwitchSettingsFromDstMask(
         Seq(

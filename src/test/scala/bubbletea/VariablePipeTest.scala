@@ -6,9 +6,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import circt.stage.ChiselStage
 
 class VariablePipeTest extends AnyFlatSpec with ChiselScalatestTester {
-  behavior of "VariablePipe"
-
-  it should "work :')" in {
+  "VariablePipe" should "work :')" in {
     test(new VariablePipe(UInt(32.W), 4)).withAnnotations(Seq(WriteVcdAnnotation)) { dut =>
         dut.io.in.valid.poke(true)
         dut.io.in.bits.poke(69)

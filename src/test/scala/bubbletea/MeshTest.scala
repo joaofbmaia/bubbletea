@@ -6,9 +6,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import circt.stage.ChiselStage
 
 class MeshTest extends AnyFlatSpec with ChiselScalatestTester {
-  behavior of "Mesh"
-
-  it should "do something" in {
+  "Mesh" should "do something" in {
     test(new Mesh(CommonAcceleratorConfigs.defaultConfig)).withAnnotations(Seq()) { dut =>
     // test body here
     }

@@ -6,9 +6,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import circt.stage.ChiselStage
 
 class BenesPermutationNetworkTest extends AnyFlatSpec with ChiselScalatestTester {
-  behavior of "BenesPermutationNetwork"
-
-  it should "do something" in {
+  "BenesPermutationNetwork" should "do something" in {
     test(new BenesPermutationNetwork(UInt(32.W), 16)).withAnnotations(Seq()) { dut =>
     // test body here
     }
@@ -21,9 +19,7 @@ class BenesPermutationNetworkTest extends AnyFlatSpec with ChiselScalatestTester
     )
   }
 
-  behavior of "PermutationNetwork helper object"
-
-  it should "calculate switch settings" in {
+  "PermutationNetwork helper object" should "calculate switch settings" in {
     // println(PermutationNetwork.generateSwitchSettings(Seq(3, 5, 2, 4, 0, 7, 1, 6)))
     // println(PermutationNetwork.generateSwitchSettings(Seq(0, 1, 2, 3, 4, 5, 6, 7)))
     // println(PermutationNetwork.generateSwitchSettings(Seq(7, 6, 5, 4, 3, 2, 1, 0)))

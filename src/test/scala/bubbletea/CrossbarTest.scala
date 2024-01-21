@@ -6,13 +6,11 @@ import org.scalatest.flatspec.AnyFlatSpec
 import circt.stage.ChiselStage
 
 class CrossbarTest extends AnyFlatSpec with ChiselScalatestTester {
-  behavior of "Crossbar"
-
   val n = 8
   val m = 8
   val t = SInt(32.W)
 
-  it should "work :')" in {
+  "Crossbar" should "work :')" in {
     test(new Crossbar(n, m, t)) { dut =>
       for(i <- 0 until n) {
         dut.io.in(i).poke((i*10).S)
