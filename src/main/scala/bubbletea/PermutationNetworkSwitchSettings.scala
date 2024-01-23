@@ -15,7 +15,7 @@ object SwitchSetting extends Enumeration {
   val Straight, Cross = Value
 }
 
-object PermutationNetwork {
+object PermutationNetworkUtils {
   def generateSwitchSettings(permutations: Seq[Int]): Seq[Seq[Boolean]] = {
     import scala.collection.mutable.ArrayBuffer
     import SwitchSetting._

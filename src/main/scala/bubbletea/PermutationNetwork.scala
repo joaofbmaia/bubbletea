@@ -4,11 +4,11 @@ import chisel3._
 import chisel3.util.isPow2
 import chisel3.util.log2Ceil
 
-trait BenesInterface[T <: Data] extends Module {
+trait PermutationNetworkInterface[T <: Data] extends Module {
   val io: Bundle { val in: Vec[T]; val out: Vec[T]; val select: Vec[Vec[Bool]] }
 }
 
-class Crossbar2x2[T <: Data](dataType: T) extends Module with BenesInterface[T] {
+class Crossbar2x2[T <: Data](dataType: T) extends Module with PermutationNetworkInterface[T] {
   val io = IO(new Bundle {
     val in = Input(Vec(2, dataType))
     val out = Output(Vec(2, dataType))
@@ -18,7 +18,8 @@ class Crossbar2x2[T <: Data](dataType: T) extends Module with BenesInterface[T] 
   io.out(1) := Mux(io.select(0)(0), io.in(0), io.in(1))
 }
 
-class BenesPermutationNetwork[T <: Data](dataType: T, N: Int) extends Module with BenesInterface[T] {
+/* A Benes Permutation Network */
+class PermutationNetwork[T <: Data](dataType: T, N: Int) extends Module with PermutationNetworkInterface[T] {
   require(isPow2(N), "N must be a power of 2")
   require(N >= 4, "N must be greater than or equal to 4")
   val stages = 2 * log2Ceil(N) - 1
@@ -33,9 +34,9 @@ class BenesPermutationNetwork[T <: Data](dataType: T, N: Int) extends Module wit
   val exitSwitches = Seq.fill(switchesPerStage)(Module(new Crossbar2x2(dataType)))
 
   val topSubnetwork =
-    if (N == 4) Module(new Crossbar2x2(dataType)) else Module(new BenesPermutationNetwork(dataType, N / 2))
+    if (N == 4) Module(new Crossbar2x2(dataType)) else Module(new PermutationNetwork(dataType, N / 2))
   val bottomSubnetwork =
-    if (N == 4) Module(new Crossbar2x2(dataType)) else Module(new BenesPermutationNetwork(dataType, N / 2))
+    if (N == 4) Module(new Crossbar2x2(dataType)) else Module(new PermutationNetwork(dataType, N / 2))
 
   for (i <- 0 until switchesPerStage) {
     entrySwitches(i).io.in(0) := io.in(2 * i)

@@ -11,7 +11,7 @@ import chisel3.experimental.BundleLiterals._
 class StreamingStageTest extends AnyFlatSpec with ChiselScalatestTester {
   "StreamingStage" should "do something" in {
     test(new StreamingStage(CommonAcceleratorConfigs.minimalConfig)).withAnnotations(Seq(WriteVcdAnnotation)) { dut =>
-      val testRemaperSetup = PermutationNetwork.generateSwitchSettingsFromDstMask(
+      val testRemaperSetup = PermutationNetworkUtils.generateSwitchSettingsFromDstMask(
         Seq(
           Seq(
             DstMask(used = true, side = Side.North, index = 0, moduloCycle = 0),

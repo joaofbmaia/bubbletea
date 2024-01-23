@@ -25,7 +25,7 @@ class StreamRemaper[T <: Data](config: AcceleratorConfig[T]) extends Module {
   val downstreamValid = Wire(Bool())
   val downstreamReady = Wire(Bool())
 
-  val permutationNetwork = Module(new BenesPermutationNetwork(config.dataType, config.numberOfRemaperElements))
+  val permutationNetwork = Module(new PermutationNetwork(config.dataType, config.numberOfRemaperElements))
 
   permutationNetwork.io.in := macroStreams.asTypeOf(Vec(config.numberOfRemaperElements, config.dataType))
   permutationNetwork.io.select := io.remaperSwitchesSetup

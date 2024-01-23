@@ -5,16 +5,16 @@ import chiseltest._
 import org.scalatest.flatspec.AnyFlatSpec
 import circt.stage.ChiselStage
 
-class BenesPermutationNetworkTest extends AnyFlatSpec with ChiselScalatestTester {
-  "BenesPermutationNetwork" should "do something" in {
-    test(new BenesPermutationNetwork(UInt(32.W), 16)).withAnnotations(Seq()) { dut =>
+class PermutationNetworkTest extends AnyFlatSpec with ChiselScalatestTester {
+  "PermutationNetwork" should "do something" in {
+    test(new PermutationNetwork(UInt(32.W), 16)).withAnnotations(Seq()) { dut =>
     // test body here
     }
   }
 
   it should "emit Verilog" in {
     ChiselStage.emitSystemVerilogFile(
-      new BenesPermutationNetwork(UInt(32.W), 16),
+      new PermutationNetwork(UInt(32.W), 16),
       firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info")
     )
   }
@@ -24,7 +24,7 @@ class BenesPermutationNetworkTest extends AnyFlatSpec with ChiselScalatestTester
     // println(PermutationNetwork.generateSwitchSettings(Seq(0, 1, 2, 3, 4, 5, 6, 7)))
     // println(PermutationNetwork.generateSwitchSettings(Seq(7, 6, 5, 4, 3, 2, 1, 0)))
 
-    println(PermutationNetwork.generateSwitchSettingsFromDstMask(
+    println(PermutationNetworkUtils.generateSwitchSettingsFromDstMask(
       Seq(
         Seq(
           DstMask(used = true, side = Side.North, index = 0, moduloCycle = 0),
