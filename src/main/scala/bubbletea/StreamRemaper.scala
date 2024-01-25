@@ -10,9 +10,9 @@ object StreamRemaper {
 
 class StreamRemaper[T <: Data](config: AcceleratorConfig[T]) extends Module {
   import StreamRemaper._
-  assert(config.maxMacroStreams * config.macroStreamDepth == config.maxInitiationInterval * (2 * config.meshRows + 2 * config.meshColumns), "Number of macro stream elements must equal number of micro stream elements")
+  assert(config.maxSimultaneousMacroStreams * config.macroStreamDepth == config.maxInitiationInterval * (2 * config.meshRows + 2 * config.meshColumns), "Number of macro stream elements must equal number of micro stream elements")
   val io = IO(new Bundle {
-    val macroStreamsIn = Flipped(Decoupled(Vec(config.maxMacroStreams, Vec(config.macroStreamDepth, config.dataType))))
+    val macroStreamsIn = Flipped(Decoupled(Vec(config.maxSimultaneousMacroStreams, Vec(config.macroStreamDepth, config.dataType))))
     val microStreamsOut = Decoupled(Vec(config.maxInitiationInterval, new MeshData(config)))
     val remaperSwitchesSetup = Input(Vec(config.numberOfRempaerSwitchStages, Vec(config.numberOfRemaperSwitchesPerStage, Bool())))
   })
