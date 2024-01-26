@@ -4,6 +4,12 @@ import chisel3._
 import chisel3.util.Decoupled
 import freechips.rocketchip.amba.axi4.{AXI4Bundle, AXI4BundleParameters}
 
+class StreamingEngineCtrlBundle[T <: Data](config: AcceleratorConfig[T]) extends Bundle {
+  val reset = Output(Bool())
+  val loadStreamsDone = Input(Vec(config.maxSimultaneousMacroStreams, Bool()))
+  val loadStreamsCompleted = Input(Vec(config.maxSimultaneousMacroStreams, Vec(config.seMaxStreamDims, Bool())))
+}
+
 class StreamingEngineCfgBundle[T <: Data](config: AcceleratorConfig[T]) extends Bundle {
   val start = Bool()
   val end = Bool()
@@ -21,17 +27,17 @@ class StreamingEngineCfgBundle[T <: Data](config: AcceleratorConfig[T]) extends 
   val dimSize = UInt(config.seSizeWidth.W)
 }
 
-class StreamingEngineLoadOperandBundle[T <: Data](config: AcceleratorConfig[T]) extends Bundle {
-  val done = Bool()
-  val vecData = UInt(config.macroStreamDepth.W)
-  val predicate = UInt((config.macroStreamDepth / 8).W)
-  val completed = UInt(config.seMaxStreamDims.W)
-}
+// class StreamingEngineLoadOperandBundle[T <: Data](config: AcceleratorConfig[T]) extends Bundle {
+//   val done = Bool()
+//   val vecData = UInt(config.macroStreamDepth.W)
+//   val predicate = UInt((config.macroStreamDepth / 8).W)
+//   val completed = UInt(config.seMaxStreamDims.W)
+// }
 
-class StreamingEngineStoreOperandBundle[T <: Data](config: AcceleratorConfig[T]) extends Bundle {
-  val vecData = UInt(config.macroStreamDepth.W)
-  val predicate = UInt((config.macroStreamDepth / 8).W)
-}
+// class StreamingEngineStoreOperandBundle[T <: Data](config: AcceleratorConfig[T]) extends Bundle {
+//   val vecData = UInt(config.macroStreamDepth.W)
+//   val predicate = UInt((config.macroStreamDepth / 8).W)
+// }
 
 class StreamingEngineHpcBundle extends Bundle {
   val ssDesc = UInt(32.W)
@@ -48,10 +54,13 @@ class StreamingEngineHpcBundle extends Bundle {
 
 class StreamingEngine[T <: Data](config: AcceleratorConfig[T]) extends Module {
   val io = IO(new Bundle {
-    val ctrlReset = Input(Bool())
+    //val ctrlReset = Input(Bool())
+    val control = Flipped(new StreamingEngineCtrlBundle(config))
     val cfg = Flipped(Decoupled(new StreamingEngineCfgBundle(config)))
-    val loadOperands = Vec(config.maxSimultaneousMacroStreams, Decoupled(new StreamingEngineLoadOperandBundle(config)))
-    val storeOperands = Flipped(Vec(1, Decoupled(new StreamingEngineStoreOperandBundle(config))))
+    val loadStreams = Decoupled((Vec(config.maxSimultaneousMacroStreams, Vec(config.macroStreamDepth, config.dataType))))
+    val storeStreams = Flipped(Decoupled((Vec(1, Vec(config.macroStreamDepth, config.dataType)))))
+    // val loadOperands = Vec(config.maxSimultaneousMacroStreams, Decoupled(new StreamingEngineLoadOperandBundle(config)))
+    // val storeOperands = Flipped(Vec(1, Decoupled(new StreamingEngineStoreOperandBundle(config))))
     val memory = AXI4Bundle(new AXI4BundleParameters(config.seAddressWidth, config.seAxiDataWidth, 1))
     val hpc = Output(new StreamingEngineHpcBundle)
   })
@@ -72,7 +81,7 @@ class StreamingEngine[T <: Data](config: AcceleratorConfig[T]) extends Module {
       LMMU_NUM_VECS = config.seLmmuNumVecs,
       SMMU_NUM_ADDRESSES = config.seSmmuNumAddresses,
       ADDRESS_WIDTH = config.seAddressWidth,
-      VEC_WIDTH = config.macroStreamDepth * 8,
+      VEC_WIDTH = config.macroStreamDepth * config.dataType.getWidth,
       NUM_SRC_OPERANDS = config.maxSimultaneousMacroStreams,
       AXI_R_DATA_WIDTH = config.seAxiDataWidth,
       AXI_W_DATA_WIDTH = config.seAxiDataWidth,
@@ -81,8 +90,14 @@ class StreamingEngine[T <: Data](config: AcceleratorConfig[T]) extends Module {
     )
   )
 
-  // Control reset
-  streamingEngineImpl.io.ctrl_reset := io.ctrlReset
+  // Control
+  //streamingEngineImpl.io.ctrl_reset := io.ctrlReset
+  streamingEngineImpl.io.ctrl_reset := io.control.reset
+  for (i <- 0 until config.maxSimultaneousMacroStreams) {
+    io.control.loadStreamsCompleted(i) := streamingEngineImpl.io.rs_out_completed(i).asTypeOf(Vec(config.seMaxStreamDims, Bool()))
+  }
+  io.control.loadStreamsDone := streamingEngineImpl.io.rs_out_done
+
 
   // Configuration channel
   io.cfg.ready := streamingEngineImpl.io.cpu_out_cfg_ready
@@ -101,26 +116,44 @@ class StreamingEngine[T <: Data](config: AcceleratorConfig[T]) extends Module {
   streamingEngineImpl.io.cpu_in_cfg_dim_offset := io.cfg.bits.dimOffset
   streamingEngineImpl.io.cpu_in_cfg_dim_stride := io.cfg.bits.dimStride
   streamingEngineImpl.io.cpu_in_cfg_dim_size := io.cfg.bits.dimSize
-  
-  // Load operands channel
+
+  // Load streams channel
+  io.loadStreams.valid := streamingEngineImpl.io.rs_out_valid.reduce(_&&_)
   for (i <- 0 until config.maxSimultaneousMacroStreams) {
-    streamingEngineImpl.io.rs_in_ready(i) := io.loadOperands(i).ready
-    io.loadOperands(i).valid := streamingEngineImpl.io.rs_out_valid(i)
-    io.loadOperands(i).bits.done := streamingEngineImpl.io.rs_out_done(i)
-    io.loadOperands(i).bits.vecData := streamingEngineImpl.io.rs_out_vecdata(i)
-    io.loadOperands(i).bits.predicate := streamingEngineImpl.io.rs_out_predicate(i)
-    io.loadOperands(i).bits.completed := streamingEngineImpl.io.rs_out_completed(i)
+    streamingEngineImpl.io.rs_in_ready(i) := io.loadStreams.ready
+    io.loadStreams.bits(i) := streamingEngineImpl.io.rs_out_vecdata(i).asTypeOf(Vec(config.macroStreamDepth, config.dataType))
     streamingEngineImpl.io.rs_in_streamid(i) := i.U
+    //streamingEngineImpl.io.rs_in_predicate(i) is not used //TODO: fix this
   }
 
-  // Store operands channel
-  streamingEngineImpl.io.rd_in_valid := io.storeOperands(0).valid
-  streamingEngineImpl.io.rd_in_streamid := io.storeOperands(0).bits.vecData
-  streamingEngineImpl.io.rd_in_vecdata := io.storeOperands(0).bits.vecData
-  streamingEngineImpl.io.rd_in_predicate := io.storeOperands(0).bits.predicate
-  io.storeOperands(0).ready := streamingEngineImpl.io.rd_out_ready
+  // Store stream channel
+  streamingEngineImpl.io.rd_in_valid := io.storeStreams.valid
   streamingEngineImpl.io.rd_in_streamid := 0.U
-  // streamingEngineImpl.io.rd_out_width is not used
+  streamingEngineImpl.io.rd_in_vecdata := io.storeStreams.bits(0).asUInt
+  io.storeStreams.ready := streamingEngineImpl.io.rd_out_ready
+  streamingEngineImpl.io.rd_in_predicate := -1.S.asUInt //TODO: fix this
+
+
+  
+  // // Load operands channel
+  // for (i <- 0 until config.maxSimultaneousMacroStreams) {
+  //   streamingEngineImpl.io.rs_in_ready(i) := io.loadOperands(i).ready
+  //   io.loadOperands(i).valid := streamingEngineImpl.io.rs_out_valid(i)
+  //   io.loadOperands(i).bits.done := streamingEngineImpl.io.rs_out_done(i)
+  //   io.loadOperands(i).bits.vecData := streamingEngineImpl.io.rs_out_vecdata(i)
+  //   io.loadOperands(i).bits.predicate := streamingEngineImpl.io.rs_out_predicate(i)
+  //   io.loadOperands(i).bits.completed := streamingEngineImpl.io.rs_out_completed(i)
+  //   streamingEngineImpl.io.rs_in_streamid(i) := i.U
+  // }
+
+  // // Store operands channel
+  // streamingEngineImpl.io.rd_in_valid := io.storeOperands(0).valid
+  // streamingEngineImpl.io.rd_in_streamid := io.storeOperands(0).bits.vecData
+  // streamingEngineImpl.io.rd_in_vecdata := io.storeOperands(0).bits.vecData
+  // streamingEngineImpl.io.rd_in_predicate := io.storeOperands(0).bits.predicate
+  // io.storeOperands(0).ready := streamingEngineImpl.io.rd_out_ready
+  // streamingEngineImpl.io.rd_in_streamid := 0.U
+  // // streamingEngineImpl.io.rd_out_width is not used
 
 
   // Memory AXI Connections

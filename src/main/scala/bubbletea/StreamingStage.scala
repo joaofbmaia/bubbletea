@@ -11,11 +11,13 @@ class StreamingStage[T <: Data](config: AcceleratorConfig[T]) extends Module {
     "Number of macro stream elements must equal number of micro stream elements"
   )
   val io = IO(new Bundle {
-    val macroStreamBuffer =
-      Flipped(Decoupled((Vec(config.maxSimultaneousMacroStreams, Vec(config.macroStreamDepth, config.dataType)))))
+    val memory = AXI4Bundle(new AXI4BundleParameters(config.seAddressWidth, config.seAxiDataWidth, 1))
     val meshOut = Decoupled(new MeshData(config))
 
     val initiationIntervalMinusOne = Input(UInt(log2Ceil(config.maxInitiationInterval).W))
+
+    val streamingEngineCtrl = Flipped(new StreamingEngineCtrlBundle(config))
+    val streamingEngineCfg = Flipped(Decoupled(new StreamingEngineCfgBundle(config)))
     val remaperSwitchesSetup =
       Input(Vec(config.numberOfRempaerSwitchStages, Vec(config.numberOfRemaperSwitchesPerStage, Bool())))
   })
@@ -29,15 +31,19 @@ class StreamingStage[T <: Data](config: AcceleratorConfig[T]) extends Module {
     currentModuloCycle := currentModuloCycle + 1.U
   }
 
-  // Instantiate the stram remaper
+  // Instantiate the stream remaper
   val remaper = Module(new StreamRemaper(config))
 
   // Instantiate the streaming engine
   val streamingEngine = Module(new StreamingEngine(config))
 
   // Connections
+  streamingEngine.io.control <> io.streamingEngineCtrl
+  streamingEngine.io.cfg <> io.streamingEngineCfg
 
-  remaper.io.macroStreamsIn :<>= io.macroStreamBuffer
+  streamingEngine.io.memory <> io.memory
+
+  remaper.io.macroStreamsIn :<>= streamingEngine.io.loadStreams
 
   io.meshOut.bits := remaper.io.microStreamsOut.bits(currentModuloCycle)
 
@@ -46,5 +52,9 @@ class StreamingStage[T <: Data](config: AcceleratorConfig[T]) extends Module {
   remaper.io.microStreamsOut.ready := io.meshOut.fire && (currentModuloCycle === io.initiationIntervalMinusOne)
 
   remaper.io.remaperSwitchesSetup := io.remaperSwitchesSetup
+
+  // store not implemented yet
+  streamingEngine.io.storeStreams.bits := DontCare
+  streamingEngine.io.storeStreams.valid := false.B
 
 }
