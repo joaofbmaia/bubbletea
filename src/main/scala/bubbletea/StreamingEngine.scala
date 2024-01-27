@@ -8,6 +8,7 @@ class StreamingEngineCtrlBundle[T <: Data](config: AcceleratorConfig[T]) extends
   val reset = Output(Bool())
   val loadStreamsDone = Input(Vec(config.maxSimultaneousMacroStreams, Bool()))
   val loadStreamsCompleted = Input(Vec(config.maxSimultaneousMacroStreams, Vec(config.seMaxStreamDims, Bool())))
+  val loadStreamsConfigured = Output(Vec(config.maxSimultaneousMacroStreams, Bool()))
 }
 
 class StreamingEngineCfgBundle[T <: Data](config: AcceleratorConfig[T]) extends Bundle {
@@ -118,9 +119,15 @@ class StreamingEngine[T <: Data](config: AcceleratorConfig[T]) extends Module {
   streamingEngineImpl.io.cpu_in_cfg_dim_size := io.cfg.bits.dimSize
 
   // Load streams channel
-  io.loadStreams.valid := streamingEngineImpl.io.rs_out_valid.reduce(_&&_)
+  val loadValid = Wire(Bool())
+  loadValid := (streamingEngineImpl.io.rs_out_valid zip io.control.loadStreamsConfigured).map { case (a, b) => a || !b }.reduce(_ && _)
+  io.loadStreams.valid := loadValid
+
+  val loadReady = Wire(Bool())
+  loadReady := io.loadStreams.ready && loadValid
+
   for (i <- 0 until config.maxSimultaneousMacroStreams) {
-    streamingEngineImpl.io.rs_in_ready(i) := io.loadStreams.ready
+    streamingEngineImpl.io.rs_in_ready(i) := loadReady
     io.loadStreams.bits(i) := streamingEngineImpl.io.rs_out_vecdata(i).asTypeOf(Vec(config.macroStreamDepth, config.dataType))
     streamingEngineImpl.io.rs_in_streamid(i) := i.U
     //streamingEngineImpl.io.rs_in_predicate(i) is not used //TODO: fix this

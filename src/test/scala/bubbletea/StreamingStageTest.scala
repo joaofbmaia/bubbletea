@@ -9,66 +9,109 @@ import chisel3.experimental.VecLiterals._
 import chisel3.experimental.BundleLiterals._
 
 class StreamingStageTest extends AnyFlatSpec with ChiselScalatestTester {
-  // "StreamingStage" should "do something" in {
-  //   test(new StreamingStage(CommonAcceleratorConfigs.minimalConfig)).withAnnotations(Seq(WriteVcdAnnotation)) { dut =>
-  //     val testRemaperSetup = PermutationNetworkUtils.generateSwitchSettingsFromDstMask(
-  //       Seq(
-  //         Seq(
-  //           DstMask(used = true, side = Side.North, index = 0, moduloCycle = 0),
-  //           DstMask(used = true, side = Side.North, index = 1, moduloCycle = 0),
-  //           DstMask(used = true, side = Side.South, index = 0, moduloCycle = 0),
-  //           DstMask(used = true, side = Side.South, index = 1, moduloCycle = 0),
-  //           DstMask(used = true, side = Side.North, index = 0, moduloCycle = 1),
-  //           DstMask(used = true, side = Side.North, index = 1, moduloCycle = 1),
-  //           DstMask(used = true, side = Side.South, index = 0, moduloCycle = 1),
-  //           DstMask(used = true, side = Side.South, index = 1, moduloCycle = 1)
-  //         ),
-  //         Seq(
-  //           DstMask(used = true, side = Side.West, index = 0, moduloCycle = 0),
-  //           DstMask(used = true, side = Side.West, index = 1, moduloCycle = 1),
-  //           DstMask(used = true, side = Side.East, index = 0, moduloCycle = 0),
-  //           DstMask(used = true, side = Side.East, index = 1, moduloCycle = 1),
-  //           DstMask(used = false, side = Side.East, index = 0, moduloCycle = 0),
-  //           DstMask(used = false, side = Side.East, index = 0, moduloCycle = 0),
-  //           DstMask(used = false, side = Side.East, index = 0, moduloCycle = 0),
-  //           DstMask(used = false, side = Side.East, index = 0, moduloCycle = 0)
-  //         )
-  //       ),
-  //       rows = CommonAcceleratorConfigs.minimalConfig.meshRows,
-  //       columns = CommonAcceleratorConfigs.minimalConfig.meshColumns
-  //     )
+  "StreamingStage" should "do something" in {
+    test(new StreamingStageWithMemory(CommonAcceleratorConfigs.minimalConfig, 10, 2, 2)).withAnnotations(Seq(VerilatorBackendAnnotation, WriteVcdAnnotation)) { dut =>
+      val memoryDataWidth = CommonAcceleratorConfigs.minimalConfig.seLlbNumBytes * 8
+      val testRemaperSetup = PermutationNetworkUtils.generateSwitchSettingsFromDstMask(
+        Seq(
+          Seq(
+            DstMask(used = true, side = Side.North, index = 0, moduloCycle = 0),
+            DstMask(used = true, side = Side.North, index = 1, moduloCycle = 0),
+            DstMask(used = true, side = Side.South, index = 0, moduloCycle = 0),
+            DstMask(used = true, side = Side.South, index = 1, moduloCycle = 0),
+            DstMask(used = true, side = Side.North, index = 0, moduloCycle = 1),
+            DstMask(used = true, side = Side.North, index = 1, moduloCycle = 1),
+            DstMask(used = true, side = Side.South, index = 0, moduloCycle = 1),
+            DstMask(used = true, side = Side.South, index = 1, moduloCycle = 1)
+          ),
+          Seq(
+            DstMask(used = true, side = Side.West, index = 0, moduloCycle = 0),
+            DstMask(used = true, side = Side.West, index = 1, moduloCycle = 1),
+            DstMask(used = true, side = Side.East, index = 0, moduloCycle = 0),
+            DstMask(used = true, side = Side.East, index = 1, moduloCycle = 1),
+            DstMask(used = false, side = Side.East, index = 0, moduloCycle = 0),
+            DstMask(used = false, side = Side.East, index = 0, moduloCycle = 0),
+            DstMask(used = false, side = Side.East, index = 0, moduloCycle = 0),
+            DstMask(used = false, side = Side.East, index = 0, moduloCycle = 0)
+          )
+        ),
+        rows = CommonAcceleratorConfigs.minimalConfig.meshRows,
+        columns = CommonAcceleratorConfigs.minimalConfig.meshColumns
+      )
+      // fill first 256 bytes of memory with linear pattern
+      dut.io.memWriteEnable.poke(true.B)
+      dut.io.memWriteStrb.poke(0xffL.U)
+      for (i <- 0 until 256 by memoryDataWidth / 8) {
+        // value with every byte equal to the adress
+        val x = BigInt((i until i + memoryDataWidth / 8).map(x => f"$x%02x").reverse.reduce(_ ++ _), 16)
+        println((i / (memoryDataWidth / 8)).U)
+        dut.io.memWriteAddr.poke((i / (memoryDataWidth / 8)).U)
+        println(x.toString(16))
+        dut.io.memWriteData.poke(x)
+        dut.clock.step(1)
+      }
+      dut.io.memWriteEnable.poke(false.B)
+      dut.clock.step(1)
 
-  //     val testMacroStreams = Vec.Lit(
-  //       Vec.Lit(1.U(8.W), 2.U(8.W), 3.U(8.W), 4.U(8.W), 5.U(8.W), 6.U(8.W), 7.U(8.W), 8.U(8.W)),
-  //       Vec.Lit(9.U(8.W), 10.U(8.W), 11.U(8.W), 12.U(8.W), 13.U(8.W), 14.U(8.W), 15.U(8.W), 16.U(8.W))
-  //     )
+      for (i <- 0 until CommonAcceleratorConfigs.minimalConfig.maxSimultaneousMacroStreams) {
+        dut.io.streamingEngineCtrl.loadStreamsConfigured(i).poke(false.B)
+      }
+      
+      dut.io.meshOut.ready.poke(false.B)
 
-  //     val testMacroStreams2 = Vec.Lit(
-  //       Vec.Lit(17.U(8.W), 18.U(8.W), 19.U(8.W), 20.U(8.W), 21.U(8.W), 22.U(8.W), 23.U(8.W), 24.U(8.W)),
-  //       Vec.Lit(25.U(8.W), 26.U(8.W), 27.U(8.W), 28.U(8.W), 29.U(8.W), 30.U(8.W), 31.U(8.W), 32.U(8.W))
-  //     )
+      dut.io.streamingEngineCtrl.reset.poke(true.B)
+      dut.clock.step(1)
+      dut.io.streamingEngineCtrl.reset.poke(false.B)
 
-  //     // test body here
-  //     for (i <- 0 until CommonAcceleratorConfigs.minimalConfig.numberOfRempaerSwitchStages) {
-  //       for (j <- 0 until CommonAcceleratorConfigs.minimalConfig.numberOfRemaperSwitchesPerStage) {
-  //         dut.io.remaperSwitchesSetup(i)(j).poke(testRemaperSetup(i)(j))
-  //       }
-  //     }
-  //     dut.io.initiationIntervalMinusOne.poke(1.U)
-  //     dut.io.macroStreamBuffer.valid.poke(true.B)
-  //     dut.io.macroStreamBuffer.bits.poke(testMacroStreams)
-  //     dut.io.meshOut.ready.poke(true.B)
-  //     // dut.clock.step(1)
-  //     // dut.io.meshOut.ready.poke(false.B)
-  //     // dut.clock.step(1)
-  //     // dut.io.macroStreamBuffer.bits.poke(testMacroStreams2)
-  //     // dut.clock.step(3)
-  //     // dut.io.meshOut.ready.poke(true.B)
-  //     dut.clock.step(10)
-  //   }
-  // }
+      // configure streaming engine
+      dut.io.streamingEngineCfg.valid.poke(true.B)
+      dut.io.streamingEngineCfg.bits.vectorize.poke(false.B)
+      dut.io.streamingEngineCfg.bits.start.poke(true.B)
+      dut.io.streamingEngineCfg.bits.end.poke(false.B)
+      dut.io.streamingEngineCfg.bits.loadStore.poke(true.B)
+      dut.io.streamingEngineCfg.bits.elementWidth.poke(0.U)
+      dut.io.streamingEngineCfg.bits.stream.poke(0.U)
+      dut.io.streamingEngineCfg.bits.mod.poke(false.B)
+      dut.io.streamingEngineCfg.bits.dimOffset.poke(0.U)
+      dut.io.streamingEngineCfg.bits.dimStride.poke(1.U)
+      dut.io.streamingEngineCfg.bits.dimSize.poke(8.U)
+      dut.clock.step(1)
+      dut.io.streamingEngineCfg.bits.vectorize.poke(true.B)
+      dut.io.streamingEngineCfg.bits.start.poke(false.B)
+      dut.clock.step(1)
+      dut.io.streamingEngineCfg.bits.vectorize.poke(false.B)
+      dut.io.streamingEngineCfg.bits.end.poke(true.B)
+      dut.io.streamingEngineCfg.bits.dimOffset.poke(0.U)
+      dut.io.streamingEngineCfg.bits.dimStride.poke(8.U)
+      dut.io.streamingEngineCfg.bits.dimSize.poke(8.U)
+      dut.clock.step(1)
+      dut.io.streamingEngineCfg.valid.poke(false.B)
+      dut.io.streamingEngineCtrl.loadStreamsConfigured(0).poke(true.B)
 
-  "StreamingStage" should "emit Verilog" in {
+      // configure remaper
+      for (i <- 0 until CommonAcceleratorConfigs.minimalConfig.numberOfRempaerSwitchStages) {
+        for (j <- 0 until CommonAcceleratorConfigs.minimalConfig.numberOfRemaperSwitchesPerStage) {
+          dut.io.remaperSwitchesSetup(i)(j).poke(testRemaperSetup(i)(j))
+        }
+      }
+
+      dut.io.initiationIntervalMinusOne.poke(1.U)
+      dut.clock.step(1)
+      dut.io.meshOut.ready.poke(true.B)
+      dut.clock.step(20)
+      dut.io.meshOut.ready.poke(false.B)
+      dut.clock.step(20)
+      dut.io.meshOut.ready.poke(true.B)
+      dut.clock.step(10)
+      dut.io.meshOut.ready.poke(false.B)
+      dut.clock.step(10)
+      dut.io.meshOut.ready.poke(true.B)
+
+      dut.clock.step(300)
+    }
+  }
+
+  it should "emit Verilog" in {
     ChiselStage.emitSystemVerilogFile(
       new StreamingStage(CommonAcceleratorConfigs.minimalConfig),
       firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info")

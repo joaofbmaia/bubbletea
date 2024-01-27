@@ -81,11 +81,11 @@ object CommonAcceleratorConfigs {
     seLrqNumTables = 16,
     seLrqNumRequests = 8,
     seLlbNumTables = 4,
-    seLlbNumBytes = 64,
+    seLlbNumBytes = 8,
     seLmmuNumVecs = 4,
     seSmmuNumAddresses = 64,
     seAddressWidth = 32,
-    seAxiDataWidth = 64,
+    seAxiDataWidth = 32,
     seMaxNumLoadStreams = 4,
     seMaxNumStoreStreams = 4
   )
