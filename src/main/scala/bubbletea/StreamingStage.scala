@@ -12,11 +12,15 @@ class StreamingStage[T <: Data](config: AcceleratorConfig[T]) extends Module {
   )
   val io = IO(new Bundle {
     val memory = AXI4Bundle(new AXI4BundleParameters(config.seAddressWidth, config.seAxiDataWidth, 1))
-    val meshOut = Decoupled(new MeshData(config))
-    val meshIn = Flipped(Decoupled(new MeshData(config)))
+
+    val meshDataOut = Output(new MeshData(config))
+    val meshDataIn = Input(new MeshData(config))
+
+    val meshRun = Input(Bool())
+    val meshFire = Output(Bool())
 
     val initiationIntervalMinusOne = Input(UInt(log2Ceil(config.maxInitiationInterval).W))
-
+    
     val streamingEngineCtrl = Flipped(new StreamingEngineCtrlBundle(config))
     val streamingEngineCfg = Flipped(Decoupled(new StreamingEngineCfgBundle(config)))
     val loadRemaperSwitchesSetup =
@@ -25,27 +29,31 @@ class StreamingStage[T <: Data](config: AcceleratorConfig[T]) extends Module {
       Input(Vec(config.numberOfStoreRemaperSwitchStages, Vec(config.numberOfStoreRemaperSwitchesPerStage, Bool())))
   })
 
+  val meshFire = Wire(Bool())
+
   // Modulo cycle counter
   val currentModuloCycle = RegInit(0.U(log2Ceil(config.maxInitiationInterval).W))
 
-  when(io.meshOut.fire && io.meshIn.fire && (currentModuloCycle === io.initiationIntervalMinusOne)) {
+  val lastCycle = currentModuloCycle === io.initiationIntervalMinusOne
+
+  when(meshFire && lastCycle) {
     currentModuloCycle := 0.U
-  }.elsewhen(io.meshOut.fire && io.meshIn.fire) {
+  }.elsewhen(meshFire) {
     currentModuloCycle := currentModuloCycle + 1.U
   }
 
   // Register for buffering the micro streams from the multiple cycles
   val microStreamsReg = Reg(Vec(config.maxInitiationInterval, new MeshData(config)))
 
-  when(io.meshIn.fire) {
-    microStreamsReg(currentModuloCycle) := io.meshIn.bits
+  when(meshFire) {
+    microStreamsReg(currentModuloCycle) := io.meshDataIn
   }
 
   // The microStreams wire contains the micro streams from previous cycles and the current cycle
   val microStreams = Wire(Vec(config.maxInitiationInterval, new MeshData(config)))
   for (i <- 0 until config.maxInitiationInterval) {
     when(currentModuloCycle === i.U) {
-      microStreams(i) := io.meshIn.bits
+      microStreams(i) := io.meshDataIn
     } .otherwise {
       microStreams(i) := microStreamsReg(i)
     }
@@ -60,33 +68,26 @@ class StreamingStage[T <: Data](config: AcceleratorConfig[T]) extends Module {
   // Instantiate the streaming engine
   val streamingEngine = Module(new StreamingEngine(config))
 
-  // Connections
+  // Connect control signals
   streamingEngine.io.control :<>= io.streamingEngineCtrl
   streamingEngine.io.cfg :<>= io.streamingEngineCfg
-
-  io.memory :<>= streamingEngine.io.memory
-
-
-  loadRemaper.io.macroStreamsIn :<>= streamingEngine.io.loadStreams
-
-  io.meshOut.bits := loadRemaper.io.microStreamsOut.bits(currentModuloCycle)
-
-  io.meshOut.valid := loadRemaper.io.microStreamsOut.valid
-
-  loadRemaper.io.microStreamsOut.ready := io.meshOut.fire && (currentModuloCycle === io.initiationIntervalMinusOne)
-
   loadRemaper.io.remaperSwitchesSetup := io.loadRemaperSwitchesSetup
-
-  
-  storeRemaper.io.microStreamsIn.bits := microStreams
-
-  storeRemaper.io.microStreamsIn.valid := io.meshIn.valid && (currentModuloCycle === io.initiationIntervalMinusOne)
-
-  // TODO: I think this is wrong.
-  io.meshIn.ready := !(currentModuloCycle === io.initiationIntervalMinusOne) || storeRemaper.io.microStreamsIn.fire
-
-  streamingEngine.io.storeStreams :<>= storeRemaper.io.macroStreamsOut
-
   storeRemaper.io.remaperSwitchesSetup := io.storeRemaperSwitchesSetup
 
+  // Connect memory interface
+  io.memory :<>= streamingEngine.io.memory
+
+  // Connect Dataflow
+  loadRemaper.io.macroStreamsIn :<>= streamingEngine.io.loadStreams
+  io.meshDataOut := loadRemaper.io.microStreamsOut.bits(currentModuloCycle)
+  storeRemaper.io.microStreamsIn.bits := microStreams
+  streamingEngine.io.storeStreams :<>= storeRemaper.io.macroStreamsOut
+
+  // Control
+  val microStreamsRegReady = Wire(Bool())
+  microStreamsRegReady := !lastCycle || storeRemaper.io.microStreamsIn.ready //if (lastCycle) storeRemaper.io.microStreamsIn.ready else true.B
+  meshFire := io.meshRun && loadRemaper.io.microStreamsOut.valid && microStreamsRegReady
+  loadRemaper.io.microStreamsOut.ready := lastCycle && meshFire //lastCycle && storeRemaper.io.microStreamsIn.ready
+  storeRemaper.io.microStreamsIn.valid := meshFire
+  io.meshFire := meshFire
 }

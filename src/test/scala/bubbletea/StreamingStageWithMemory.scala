@@ -23,8 +23,11 @@ class StreamingStageWithMemory[T <: Data](config: AcceleratorConfig[T], memoryAd
     val memWriteData = Input(UInt((config.seLlbNumBytes * 8).W))
     val memWriteStrb = Input(UInt(config.seLlbNumBytes.W))
 
-    val meshOut = Decoupled(new MeshData(config))
-    val meshIn = Flipped(Decoupled(new MeshData(config)))
+    val meshDataOut = Output(new MeshData(config))
+    val meshDataIn = Input(new MeshData(config))
+
+    val meshRun = Input(Bool())
+    val meshFire = Output(Bool())
 
     val initiationIntervalMinusOne = Input(UInt(log2Ceil(config.maxInitiationInterval).W))
 
@@ -63,7 +66,11 @@ class StreamingStageWithMemory[T <: Data](config: AcceleratorConfig[T], memoryAd
 
   memory.io.axi :<>= streamingStage.io.memory
 
-  io.meshOut :<>= streamingStage.io.meshOut
+  streamingStage.io.meshRun := io.meshRun
+  io.meshFire := streamingStage.io.meshFire
+
+  io.meshDataOut := streamingStage.io.meshDataOut
+  streamingStage.io.meshDataIn := io.meshDataIn
 
   streamingStage.io.initiationIntervalMinusOne := io.initiationIntervalMinusOne
 
@@ -72,6 +79,4 @@ class StreamingStageWithMemory[T <: Data](config: AcceleratorConfig[T], memoryAd
 
   streamingStage.io.loadRemaperSwitchesSetup := io.loadRemaperSwitchesSetup
   streamingStage.io.storeRemaperSwitchesSetup := io.storeRemaperSwitchesSetup
-
-  streamingStage.io.meshIn :<>= io.meshIn
 }

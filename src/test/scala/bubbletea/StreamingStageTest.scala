@@ -57,7 +57,7 @@ class StreamingStageTest extends AnyFlatSpec with ChiselScalatestTester {
         dut.io.streamingEngineCtrl.loadStreamsConfigured(i).poke(false.B)
       }
       
-      dut.io.meshOut.ready.poke(false.B)
+      dut.io.meshRun.poke(false.B)
 
       dut.io.streamingEngineCtrl.reset.poke(true.B)
       dut.clock.step(1)
@@ -159,20 +159,7 @@ class StreamingStageTest extends AnyFlatSpec with ChiselScalatestTester {
 
       dut.io.initiationIntervalMinusOne.poke(1.U)
       dut.clock.step(1)
-      dut.io.meshOut.ready.poke(true.B)
-      dut.io.meshIn.valid.poke(true.B)
-      dut.clock.step(20)
-      dut.io.meshOut.ready.poke(false.B)
-      dut.io.meshIn.valid.poke(false.B)
-      dut.clock.step(20)
-      dut.io.meshOut.ready.poke(true.B)
-      dut.io.meshIn.valid.poke(true.B)
-      dut.clock.step(10)
-      dut.io.meshOut.ready.poke(false.B)
-      dut.io.meshIn.valid.poke(false.B)
-      dut.clock.step(10)
-      dut.io.meshOut.ready.poke(true.B)
-      dut.io.meshIn.valid.poke(true.B)
+      dut.io.meshRun.poke(true.B)
 
       dut.clock.step(300)
     }
