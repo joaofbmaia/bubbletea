@@ -24,16 +24,16 @@ class StreamingStageWithMemory[T <: Data](config: AcceleratorConfig[T], memoryAd
     val memWriteStrb = Input(UInt(config.seLlbNumBytes.W))
 
     val meshOut = Decoupled(new MeshData(config))
-
-    // testing only
-    val storeStreams = Flipped(Decoupled((Vec(config.maxSimultaneousStoreMacroStreams, Vec(config.macroStreamDepth, config.dataType)))))
+    val meshIn = Flipped(Decoupled(new MeshData(config)))
 
     val initiationIntervalMinusOne = Input(UInt(log2Ceil(config.maxInitiationInterval).W))
 
     val streamingEngineCtrl = Flipped(new StreamingEngineCtrlBundle(config))
     val streamingEngineCfg = Flipped(Decoupled(new StreamingEngineCfgBundle(config)))
-    val remaperSwitchesSetup =
+    val loadRemaperSwitchesSetup =
       Input(Vec(config.numberOfLoadRemaperSwitchStages, Vec(config.numberOfLoadRemaperSwitchesPerStage, Bool())))
+    val storeRemaperSwitchesSetup =
+      Input(Vec(config.numberOfStoreRemaperSwitchStages, Vec(config.numberOfStoreRemaperSwitchesPerStage, Bool())))
   })
 
   val streamingStage = Module(new StreamingStage(config))
@@ -70,8 +70,8 @@ class StreamingStageWithMemory[T <: Data](config: AcceleratorConfig[T], memoryAd
   streamingStage.io.streamingEngineCtrl :<>= io.streamingEngineCtrl
   streamingStage.io.streamingEngineCfg :<>= io.streamingEngineCfg
 
-  streamingStage.io.remaperSwitchesSetup := io.remaperSwitchesSetup
+  streamingStage.io.loadRemaperSwitchesSetup := io.loadRemaperSwitchesSetup
+  streamingStage.io.storeRemaperSwitchesSetup := io.storeRemaperSwitchesSetup
 
-  streamingStage.io.storeStreams :<>= io.storeStreams
-
+  streamingStage.io.meshIn :<>= io.meshIn
 }

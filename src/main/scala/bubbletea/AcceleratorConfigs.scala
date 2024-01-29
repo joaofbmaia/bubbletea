@@ -31,6 +31,7 @@ case class AcceleratorConfig[T <: Data](
   seMaxNumStoreStreams: Int
 ) {
   val maxLoadMicroStreams: Int = (2 * meshRows + 2 * meshColumns) * maxInitiationInterval
+  // Number of elements in a macrostream buffer
   val macroStreamDepth: Int = maxLoadMicroStreams / maxSimultaneousLoadMacroStreams //TODO: this doesnt need to be like this, if the load remaper is connected in a way that supports that some of the elements on the macrostream side are unnconnected
   val numberOfLoadRemaperElements: Int = maxLoadMicroStreams
   val numberOfLoadRemaperSwitchStages: Int = 2 * log2Ceil(numberOfLoadRemaperElements) - 1

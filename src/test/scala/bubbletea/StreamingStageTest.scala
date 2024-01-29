@@ -153,22 +153,26 @@ class StreamingStageTest extends AnyFlatSpec with ChiselScalatestTester {
       // configure remaper
       for (i <- 0 until CommonAcceleratorConfigs.minimalConfig.numberOfLoadRemaperSwitchStages) {
         for (j <- 0 until CommonAcceleratorConfigs.minimalConfig.numberOfLoadRemaperSwitchesPerStage) {
-          dut.io.remaperSwitchesSetup(i)(j).poke(testRemaperSetup(i)(j))
+          dut.io.loadRemaperSwitchesSetup(i)(j).poke(testRemaperSetup(i)(j))
         }
       }
 
       dut.io.initiationIntervalMinusOne.poke(1.U)
       dut.clock.step(1)
       dut.io.meshOut.ready.poke(true.B)
-      dut.io.storeStreams.valid.poke(true.B)
+      dut.io.meshIn.valid.poke(true.B)
       dut.clock.step(20)
       dut.io.meshOut.ready.poke(false.B)
+      dut.io.meshIn.valid.poke(false.B)
       dut.clock.step(20)
       dut.io.meshOut.ready.poke(true.B)
+      dut.io.meshIn.valid.poke(true.B)
       dut.clock.step(10)
       dut.io.meshOut.ready.poke(false.B)
+      dut.io.meshIn.valid.poke(false.B)
       dut.clock.step(10)
       dut.io.meshOut.ready.poke(true.B)
+      dut.io.meshIn.valid.poke(true.B)
 
       dut.clock.step(300)
     }
