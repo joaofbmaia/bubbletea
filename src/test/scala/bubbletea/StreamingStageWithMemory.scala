@@ -8,7 +8,7 @@ import simblocks.AxiMemoryBundle
 
 class StreamingStageWithMemory[T <: Data](config: AcceleratorConfig[T], memoryAddrWidth: Int, memoryReadDelay: Int, memoryWriteDelay: Int) extends Module {
   assert(
-    config.maxSimultaneousMacroStreams * config.macroStreamDepth == config.maxInitiationInterval * (2 * config.meshRows + 2 * config.meshColumns),
+    config.maxSimultaneousLoadMacroStreams * config.macroStreamDepth == config.maxInitiationInterval * (2 * config.meshRows + 2 * config.meshColumns),
     "Number of macro stream elements must equal number of micro stream elements"
   )
   val io = IO(new Bundle {
@@ -25,12 +25,15 @@ class StreamingStageWithMemory[T <: Data](config: AcceleratorConfig[T], memoryAd
 
     val meshOut = Decoupled(new MeshData(config))
 
+    // testing only
+    val storeStreams = Flipped(Decoupled((Vec(config.maxSimultaneousStoreMacroStreams, Vec(config.macroStreamDepth, config.dataType)))))
+
     val initiationIntervalMinusOne = Input(UInt(log2Ceil(config.maxInitiationInterval).W))
 
     val streamingEngineCtrl = Flipped(new StreamingEngineCtrlBundle(config))
     val streamingEngineCfg = Flipped(Decoupled(new StreamingEngineCfgBundle(config)))
     val remaperSwitchesSetup =
-      Input(Vec(config.numberOfRempaerSwitchStages, Vec(config.numberOfRemaperSwitchesPerStage, Bool())))
+      Input(Vec(config.numberOfLoadRemaperSwitchStages, Vec(config.numberOfLoadRemaperSwitchesPerStage, Bool())))
   })
 
   val streamingStage = Module(new StreamingStage(config))
@@ -58,15 +61,17 @@ class StreamingStageWithMemory[T <: Data](config: AcceleratorConfig[T], memoryAd
   memory.io.writeStrb := io.memWriteStrb
   
 
-  streamingStage.io.memory <> memory.io.axi
+  memory.io.axi :<>= streamingStage.io.memory
 
-  io.meshOut <> streamingStage.io.meshOut
+  io.meshOut :<>= streamingStage.io.meshOut
 
   streamingStage.io.initiationIntervalMinusOne := io.initiationIntervalMinusOne
 
-  streamingStage.io.streamingEngineCtrl <> io.streamingEngineCtrl
-  streamingStage.io.streamingEngineCfg <> io.streamingEngineCfg
+  streamingStage.io.streamingEngineCtrl :<>= io.streamingEngineCtrl
+  streamingStage.io.streamingEngineCfg :<>= io.streamingEngineCfg
 
   streamingStage.io.remaperSwitchesSetup := io.remaperSwitchesSetup
+
+  streamingStage.io.storeStreams :<>= io.storeStreams
 
 }

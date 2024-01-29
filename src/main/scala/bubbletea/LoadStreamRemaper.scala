@@ -4,17 +4,17 @@ import chisel3._
 import chisel3.util.Decoupled
 import chisel3.util.RegEnable
 
-object StreamRemaper {
+object LoadStreamRemaper {
   val latency = 1
 }
 
-class StreamRemaper[T <: Data](config: AcceleratorConfig[T]) extends Module {
-  import StreamRemaper._
-  assert(config.maxSimultaneousMacroStreams * config.macroStreamDepth == config.maxInitiationInterval * (2 * config.meshRows + 2 * config.meshColumns), "Number of macro stream elements must equal number of micro stream elements")
+class LoadStreamRemaper[T <: Data](config: AcceleratorConfig[T]) extends Module {
+  import LoadStreamRemaper._
+  assert(config.maxSimultaneousLoadMacroStreams * config.macroStreamDepth == config.maxInitiationInterval * (2 * config.meshRows + 2 * config.meshColumns), "Number of macro stream elements must equal number of micro stream elements")
   val io = IO(new Bundle {
-    val macroStreamsIn = Flipped(Decoupled(Vec(config.maxSimultaneousMacroStreams, Vec(config.macroStreamDepth, config.dataType))))
+    val macroStreamsIn = Flipped(Decoupled(Vec(config.maxSimultaneousLoadMacroStreams, Vec(config.macroStreamDepth, config.dataType))))
     val microStreamsOut = Decoupled(Vec(config.maxInitiationInterval, new MeshData(config)))
-    val remaperSwitchesSetup = Input(Vec(config.numberOfRempaerSwitchStages, Vec(config.numberOfRemaperSwitchesPerStage, Bool())))
+    val remaperSwitchesSetup = Input(Vec(config.numberOfLoadRemaperSwitchStages, Vec(config.numberOfLoadRemaperSwitchesPerStage, Bool())))
   })
 
   val macroStreams = io.macroStreamsIn.bits
@@ -25,9 +25,9 @@ class StreamRemaper[T <: Data](config: AcceleratorConfig[T]) extends Module {
   val downstreamValid = Wire(Bool())
   val downstreamReady = Wire(Bool())
 
-  val permutationNetwork = Module(new PermutationNetwork(config.dataType, config.numberOfRemaperElements))
+  val permutationNetwork = Module(new PermutationNetwork(config.dataType, config.numberOfLoadRemaperElements))
 
-  permutationNetwork.io.in := macroStreams.asTypeOf(Vec(config.numberOfRemaperElements, config.dataType))
+  permutationNetwork.io.in := macroStreams.asTypeOf(Vec(config.numberOfLoadRemaperElements, config.dataType))
   permutationNetwork.io.select := io.remaperSwitchesSetup
   microStreams := permutationNetwork.io.out.asTypeOf(microStreams)
 

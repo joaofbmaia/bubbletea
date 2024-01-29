@@ -53,7 +53,7 @@ class StreamingStageTest extends AnyFlatSpec with ChiselScalatestTester {
       dut.io.memWriteEnable.poke(false.B)
       dut.clock.step(1)
 
-      for (i <- 0 until CommonAcceleratorConfigs.minimalConfig.maxSimultaneousMacroStreams) {
+      for (i <- 0 until CommonAcceleratorConfigs.minimalConfig.maxSimultaneousLoadMacroStreams) {
         dut.io.streamingEngineCtrl.loadStreamsConfigured(i).poke(false.B)
       }
       
@@ -87,10 +87,72 @@ class StreamingStageTest extends AnyFlatSpec with ChiselScalatestTester {
       dut.clock.step(1)
       dut.io.streamingEngineCfg.valid.poke(false.B)
       dut.io.streamingEngineCtrl.loadStreamsConfigured(0).poke(true.B)
+      
+      // wait for streaming engine to be ready for configuration again
+      while (!dut.io.streamingEngineCfg.ready.peek().litToBoolean) {
+        dut.clock.step(1)
+      }
+
+      // configure streaming engine (store)
+      dut.io.streamingEngineCfg.valid.poke(true.B)
+      dut.io.streamingEngineCfg.bits.vectorize.poke(false.B)
+      dut.io.streamingEngineCfg.bits.start.poke(true.B)
+      dut.io.streamingEngineCfg.bits.end.poke(false.B)
+      dut.io.streamingEngineCfg.bits.loadStore.poke(false.B)
+      dut.io.streamingEngineCfg.bits.elementWidth.poke(0.U)
+      dut.io.streamingEngineCfg.bits.stream.poke(2.U)
+      dut.io.streamingEngineCfg.bits.mod.poke(false.B)
+      dut.io.streamingEngineCfg.bits.dimOffset.poke(128.U)
+      dut.io.streamingEngineCfg.bits.dimStride.poke(1.U)
+      dut.io.streamingEngineCfg.bits.dimSize.poke(8.U)
+      dut.clock.step(1)
+      dut.io.streamingEngineCfg.bits.vectorize.poke(true.B)
+      dut.io.streamingEngineCfg.bits.start.poke(false.B)
+      dut.clock.step(1)
+      dut.io.streamingEngineCfg.bits.vectorize.poke(false.B)
+      dut.io.streamingEngineCfg.bits.end.poke(true.B)
+      dut.io.streamingEngineCfg.bits.dimOffset.poke(0.U)
+      dut.io.streamingEngineCfg.bits.dimStride.poke(8.U)
+      dut.io.streamingEngineCfg.bits.dimSize.poke(8.U)
+      dut.clock.step(1)
+      dut.io.streamingEngineCfg.valid.poke(false.B)
+      dut.io.streamingEngineCtrl.storeStreamsConfigured(0).poke(true.B)
+      dut.io.streamingEngineCtrl.storeStreamsVecLengthMinusOne(0).poke(1.U)
+
+      // wait for streaming engine to be ready for configuration again
+      while (!dut.io.streamingEngineCfg.ready.peek().litToBoolean) {
+        dut.clock.step(1)
+      }
+      
+      // configure streaming engine (store2)
+      dut.io.streamingEngineCfg.valid.poke(true.B)
+      dut.io.streamingEngineCfg.bits.vectorize.poke(false.B)
+      dut.io.streamingEngineCfg.bits.start.poke(true.B)
+      dut.io.streamingEngineCfg.bits.end.poke(false.B)
+      dut.io.streamingEngineCfg.bits.loadStore.poke(false.B)
+      dut.io.streamingEngineCfg.bits.elementWidth.poke(0.U)
+      dut.io.streamingEngineCfg.bits.stream.poke(3.U)
+      dut.io.streamingEngineCfg.bits.mod.poke(false.B)
+      dut.io.streamingEngineCfg.bits.dimOffset.poke(192.U)
+      dut.io.streamingEngineCfg.bits.dimStride.poke(1.U)
+      dut.io.streamingEngineCfg.bits.dimSize.poke(8.U)
+      dut.clock.step(1)
+      dut.io.streamingEngineCfg.bits.vectorize.poke(true.B)
+      dut.io.streamingEngineCfg.bits.start.poke(false.B)
+      dut.clock.step(1)
+      dut.io.streamingEngineCfg.bits.vectorize.poke(false.B)
+      dut.io.streamingEngineCfg.bits.end.poke(true.B)
+      dut.io.streamingEngineCfg.bits.dimOffset.poke(0.U)
+      dut.io.streamingEngineCfg.bits.dimStride.poke(8.U)
+      dut.io.streamingEngineCfg.bits.dimSize.poke(8.U)
+      dut.clock.step(1)
+      dut.io.streamingEngineCfg.valid.poke(false.B)
+      dut.io.streamingEngineCtrl.storeStreamsConfigured(1).poke(true.B)
+      dut.io.streamingEngineCtrl.storeStreamsVecLengthMinusOne(1).poke(1.U)
 
       // configure remaper
-      for (i <- 0 until CommonAcceleratorConfigs.minimalConfig.numberOfRempaerSwitchStages) {
-        for (j <- 0 until CommonAcceleratorConfigs.minimalConfig.numberOfRemaperSwitchesPerStage) {
+      for (i <- 0 until CommonAcceleratorConfigs.minimalConfig.numberOfLoadRemaperSwitchStages) {
+        for (j <- 0 until CommonAcceleratorConfigs.minimalConfig.numberOfLoadRemaperSwitchesPerStage) {
           dut.io.remaperSwitchesSetup(i)(j).poke(testRemaperSetup(i)(j))
         }
       }
@@ -98,6 +160,7 @@ class StreamingStageTest extends AnyFlatSpec with ChiselScalatestTester {
       dut.io.initiationIntervalMinusOne.poke(1.U)
       dut.clock.step(1)
       dut.io.meshOut.ready.poke(true.B)
+      dut.io.storeStreams.valid.poke(true.B)
       dut.clock.step(20)
       dut.io.meshOut.ready.poke(false.B)
       dut.clock.step(20)

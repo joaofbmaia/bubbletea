@@ -8,7 +8,8 @@ case class AcceleratorConfig[T <: Data](
   meshRows:    Int,
   meshColumns: Int,
   maxInitiationInterval: Int,
-  maxSimultaneousMacroStreams: Int,
+  maxSimultaneousLoadMacroStreams: Int,
+  maxSimultaneousStoreMacroStreams : Int,
 
   seMaxStreamDims: Int,
   seMaxStreamMods: Int,
@@ -24,20 +25,25 @@ case class AcceleratorConfig[T <: Data](
   seSmmuNumAddresses: Int,
   seAddressWidth: Int, // =coreMaxAddrBits
   //seVecWidth: Int, // =macroStreamDepth
-  //seNumSrcOperands: Int, // =maxSimultaneousMacroStreams
+  //seNumSrcOperands: Int, // =maxSimultaneousLoadMacroStreams
   seAxiDataWidth: Int, // =beatBytes * 8
   seMaxNumLoadStreams: Int,
   seMaxNumStoreStreams: Int
 ) {
-  val maxMicroStreams: Int = (2 * meshRows + 2 * meshColumns) * maxInitiationInterval
-  val macroStreamDepth: Int = maxMicroStreams / maxSimultaneousMacroStreams
-  val numberOfRemaperElements: Int = maxSimultaneousMacroStreams * macroStreamDepth
-  val numberOfRempaerSwitchStages: Int = 2 * log2Ceil(numberOfRemaperElements) - 1
-  val numberOfRemaperSwitchesPerStage: Int = numberOfRemaperElements / 2
+  val maxLoadMicroStreams: Int = (2 * meshRows + 2 * meshColumns) * maxInitiationInterval
+  val macroStreamDepth: Int = maxLoadMicroStreams / maxSimultaneousLoadMacroStreams //TODO: this doesnt need to be like this, if the load remaper is connected in a way that supports that some of the elements on the macrostream side are unnconnected
+  val numberOfLoadRemaperElements: Int = maxLoadMicroStreams
+  val numberOfLoadRemaperSwitchStages: Int = 2 * log2Ceil(numberOfLoadRemaperElements) - 1
+  val numberOfLoadRemaperSwitchesPerStage: Int = numberOfLoadRemaperElements / 2
+
+  val maxStoreMicroStreams: Int = (2 * meshRows + 2 * meshColumns) * maxInitiationInterval
+  val numberOfStoreRemaperElements: Int = maxStoreMicroStreams
+  val numberOfStoreRemaperSwitchStages: Int = 2 * log2Ceil(numberOfStoreRemaperElements) - 1
+  val numberOfStoreRemaperSwitchesPerStage: Int = numberOfStoreRemaperElements / 2
 
   // needs updating
   override def toString: String = 
-    s"AcceleratorConfig(\n  dataType = $dataType,\n  meshRows = $meshRows,\n  meshColumns = $meshColumns,\n  maxInitiationInterval = $maxInitiationInterval,\n  maxSimultaneousMacroStreams = $maxSimultaneousMacroStreams,\n  maxMicroStreams = $maxMicroStreams,\n  macroStreamDepth = $macroStreamDepth\n)"
+    s"AcceleratorConfig(\n  dataType = $dataType,\n  meshRows = $meshRows,\n  meshColumns = $meshColumns,\n  maxInitiationInterval = $maxInitiationInterval,\n  maxSimultaneousLoadMacroStreams = $maxSimultaneousLoadMacroStreams,\n  maxLoadMicroStreams = $maxLoadMicroStreams,\n  macroStreamDepth = $macroStreamDepth\n)"
 }
 
 object CommonAcceleratorConfigs {
@@ -46,7 +52,8 @@ object CommonAcceleratorConfigs {
     meshRows = 4,
     meshColumns = 4,
     maxInitiationInterval = 4,
-    maxSimultaneousMacroStreams = 4,
+    maxSimultaneousLoadMacroStreams = 4,
+    maxSimultaneousStoreMacroStreams = 2,
     seMaxStreamDims = 8,
     seMaxStreamMods = 3,
     seOffsetWidth = 32,
@@ -71,7 +78,8 @@ object CommonAcceleratorConfigs {
     meshColumns = 2,
     maxInitiationInterval = 2,
     //  not minimal below
-    maxSimultaneousMacroStreams = 2,
+    maxSimultaneousLoadMacroStreams = 2,
+    maxSimultaneousStoreMacroStreams = 2,
     seMaxStreamDims = 8,
     seMaxStreamMods = 3,
     seOffsetWidth = 32,
