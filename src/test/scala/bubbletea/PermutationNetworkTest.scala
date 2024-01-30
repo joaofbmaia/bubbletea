@@ -27,24 +27,24 @@ class PermutationNetworkTest extends AnyFlatSpec with ChiselScalatestTester {
     println(PermutationNetworkUtils.generateSwitchSettingsFromDstMask(
       Seq(
         Seq(
-          DstMask(used = true, side = Side.North, index = 0, moduloCycle = 0),
-          DstMask(used = true, side = Side.North, index = 1, moduloCycle = 0),
-          DstMask(used = true, side = Side.South, index = 0, moduloCycle = 0),
-          DstMask(used = true, side = Side.South, index = 1, moduloCycle = 0),
-          DstMask(used = true, side = Side.North, index = 0, moduloCycle = 1),
-          DstMask(used = true, side = Side.North, index = 1, moduloCycle = 1),
-          DstMask(used = true, side = Side.South, index = 0, moduloCycle = 1),
-          DstMask(used = true, side = Side.South, index = 1, moduloCycle = 1)
+          RemaperMask(used = true, side = Side.North, index = 0, moduloCycle = 0),
+          RemaperMask(used = true, side = Side.North, index = 1, moduloCycle = 0),
+          RemaperMask(used = true, side = Side.South, index = 0, moduloCycle = 0),
+          RemaperMask(used = true, side = Side.South, index = 1, moduloCycle = 0),
+          RemaperMask(used = true, side = Side.North, index = 0, moduloCycle = 1),
+          RemaperMask(used = true, side = Side.North, index = 1, moduloCycle = 1),
+          RemaperMask(used = true, side = Side.South, index = 0, moduloCycle = 1),
+          RemaperMask(used = true, side = Side.South, index = 1, moduloCycle = 1)
         ),
         Seq(
-          DstMask(used = true, side = Side.West, index = 0, moduloCycle = 0),
-          DstMask(used = true, side = Side.West, index = 1, moduloCycle = 1),
-          DstMask(used = true, side = Side.East, index = 0, moduloCycle = 0),
-          DstMask(used = true, side = Side.East, index = 1, moduloCycle = 1),
-          DstMask(used = false, side = Side.East, index = 0, moduloCycle = 0),
-          DstMask(used = false, side = Side.East, index = 0, moduloCycle = 0),
-          DstMask(used = false, side = Side.East, index = 0, moduloCycle = 0),
-          DstMask(used = false, side = Side.East, index = 0, moduloCycle = 0)
+          RemaperMask(used = true, side = Side.West, index = 0, moduloCycle = 0),
+          RemaperMask(used = true, side = Side.West, index = 1, moduloCycle = 1),
+          RemaperMask(used = true, side = Side.East, index = 0, moduloCycle = 0),
+          RemaperMask(used = true, side = Side.East, index = 1, moduloCycle = 1),
+          RemaperMask(used = false, side = Side.East, index = 0, moduloCycle = 0),
+          RemaperMask(used = false, side = Side.East, index = 0, moduloCycle = 0),
+          RemaperMask(used = false, side = Side.East, index = 0, moduloCycle = 0),
+          RemaperMask(used = false, side = Side.East, index = 0, moduloCycle = 0)
         )
       ),
       rows = 2,

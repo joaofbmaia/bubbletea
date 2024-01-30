@@ -8,7 +8,7 @@ object Side extends Enumeration {
   val North, South, West, East = Value
 }
 
-case class DstMask(used: Boolean, moduloCycle: Int, side: Side.Side, index: Int)
+case class RemaperMask(used: Boolean, moduloCycle: Int, side: Side.Side, index: Int)
 
 object SwitchSetting extends Enumeration {
   type SwitchSetting = Value
@@ -16,11 +16,12 @@ object SwitchSetting extends Enumeration {
 }
 
 object PermutationNetworkUtils {
-  def generateSwitchSettings(permutations: Seq[Int]): Seq[Seq[Boolean]] = {
+  def generateSwitchSettings(permutationIn: Seq[Int], permutationOut: Seq[Int]): Seq[Seq[Boolean]] = {
     import scala.collection.mutable.ArrayBuffer
     import SwitchSetting._
     
-    val n = permutations.length
+    require(permutationIn.length == permutationOut.length, "Input and output permutations must have the same length")
+    val n = permutationIn.length
     require(isPow2(n), "N must be a power of 2")
     require(n >= 4, "N must be greater than or equal to 4")
 
@@ -110,18 +111,15 @@ object PermutationNetworkUtils {
       val switches: Seq[Seq[SwitchSetting]] = Seq(entrySwitches) ++ middleSwitches ++ Seq(exitSwitches)
       switches
     }
-    
-    val permutationOut = (0 until n)
-    val permutationIn = permutations
 
     assert(permutationIn.toSet == permutationOut.toSet, "Input is not a permutation, i.e. it does not contain all the elements from 0 to N-1 exactly once")
 
     generateSwitchSettingsRec(permutationIn, permutationOut).map(_.map(_ == Cross))
   }
 
-  def generateSwitchSettingsFromDstMask(dstMask: Seq[Seq[DstMask]], rows: Int, columns: Int): Seq[Seq[Boolean]] = {
+  def generateSwitchSettingsFromDstMask(dstMask: Seq[Seq[RemaperMask]], rows: Int, columns: Int): Seq[Seq[Boolean]] = {
     // dimenstions order: (moduloCycle, side (order: east, west, south, north), index)
-    def dstMask2index(dstMask: DstMask): Int = {
+    def dstMask2index(dstMask: RemaperMask): Int = {
       val rowSize = columns
       val columnSize = rows
       val singleCycleBufferSize = rowSize * 2 + columnSize * 2
@@ -141,6 +139,31 @@ object PermutationNetworkUtils {
 
     val permutations = permutationsUnfull.map(x => if (x == -1) missingIndicesIterator.next() else x)
 
-    generateSwitchSettings(permutations)
+    generateSwitchSettings(permutations, (0 until permutations.length))
+  }
+
+  def generateSwitchSettingsFromSrcMask(srcMask: Seq[Seq[RemaperMask]], rows: Int, columns: Int): Seq[Seq[Boolean]] = {
+    // dimenstions order: (moduloCycle, side (order: east, west, south, north), index)
+    def srcMask2index(srcMask: RemaperMask): Int = {
+      val rowSize = columns
+      val columnSize = rows
+      val singleCycleBufferSize = rowSize * 2 + columnSize * 2
+      val ret = srcMask.moduloCycle * singleCycleBufferSize + 
+                (if (srcMask.side == Side.East) 0 else 
+                 if (srcMask.side == Side.West) columnSize else 
+                 if (srcMask.side == Side.South) columnSize * 2 else 
+                 columnSize * 2 + rowSize) + 
+                 srcMask.index
+      ret
+    }
+    
+    val permutationsUnfull: Seq[Int] = srcMask.flatten.map(x => if (x.used) srcMask2index(x) else -1)
+
+    val missingIndices = (0 until permutationsUnfull.length).filter(!permutationsUnfull.contains(_))
+    val missingIndicesIterator = missingIndices.iterator
+
+    val permutations = permutationsUnfull.map(x => if (x == -1) missingIndicesIterator.next() else x)
+
+    generateSwitchSettings((0 until permutations.length), permutations)
   }
 }
