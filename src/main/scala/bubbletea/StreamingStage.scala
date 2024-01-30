@@ -88,6 +88,6 @@ class StreamingStage[T <: Data](config: AcceleratorConfig[T]) extends Module {
   microStreamsRegReady := !lastCycle || storeRemaper.io.microStreamsIn.ready //if (lastCycle) storeRemaper.io.microStreamsIn.ready else true.B
   meshFire := io.meshRun && loadRemaper.io.microStreamsOut.valid && microStreamsRegReady
   loadRemaper.io.microStreamsOut.ready := lastCycle && meshFire //lastCycle && storeRemaper.io.microStreamsIn.ready
-  storeRemaper.io.microStreamsIn.valid := meshFire
+  storeRemaper.io.microStreamsIn.valid := lastCycle && meshFire
   io.meshFire := meshFire
 }
