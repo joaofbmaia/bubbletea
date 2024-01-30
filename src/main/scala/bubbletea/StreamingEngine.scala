@@ -113,8 +113,9 @@ class StreamingEngine[T <: Data](config: AcceleratorConfig[T]) extends Module {
   
 
   // Load streams channel
-  val loadValid = Wire(Bool())
-  loadValid := (streamingEngineImpl.io.rs_out_valid zip io.control.loadStreamsConfigured).map { case (a, b) => a || !b }.reduce(_ && _)
+  val allConfiguredAreValid = (streamingEngineImpl.io.rs_out_valid zip io.control.loadStreamsConfigured).map { case (a, b) => a || !b }.reduce(_ && _)
+  val allUnconfigured = !io.control.loadStreamsConfigured.reduce(_ || _)
+  val loadValid = allConfiguredAreValid && !allUnconfigured
   io.loadStreams.valid := loadValid
 
   val loadReady = Wire(Bool())
