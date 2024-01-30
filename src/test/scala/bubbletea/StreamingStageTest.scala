@@ -165,7 +165,7 @@ class StreamingStageTest extends AnyFlatSpec with ChiselScalatestTester {
     }
   }
 
-  it should "do something2, with vecLen 2" in {
+  it should "do something2" in {
     test(new StreamingStageWithMemory(CommonAcceleratorConfigs.minimalConfig, 10, 2, 2)).withAnnotations(Seq(VerilatorBackendAnnotation, WriteVcdAnnotation)) { dut =>
       val memoryDataWidth = CommonAcceleratorConfigs.minimalConfig.seLlbNumBytes * 8
       val loadRemaperSetup = PermutationNetworkUtils.generateSwitchSettingsFromDstMask(
@@ -359,7 +359,7 @@ class StreamingStageTest extends AnyFlatSpec with ChiselScalatestTester {
     }
   }
 
-  it should "do something2" in {
+  it should "do something2, with vecLen 2" in {
     test(new StreamingStageWithMemory(CommonAcceleratorConfigs.minimalConfig, 10, 2, 2)).withAnnotations(Seq(VerilatorBackendAnnotation, WriteVcdAnnotation)) { dut =>
       val memoryDataWidth = CommonAcceleratorConfigs.minimalConfig.seLlbNumBytes * 8
       val loadRemaperSetup = PermutationNetworkUtils.generateSwitchSettingsFromDstMask(
