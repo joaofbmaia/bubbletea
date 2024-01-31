@@ -2,6 +2,8 @@
 test_run_dir/*
 /*.sv
 /*.anno.json
+src/main/scala/amba
+src/main/scala/hardfloat
 
 ### XilinxISE template
 # intermediate build files
