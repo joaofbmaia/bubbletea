@@ -28,7 +28,11 @@ case class AcceleratorConfig[T <: Data](
   //seNumSrcOperands: Int, // =maxSimultaneousLoadMacroStreams
   seAxiDataWidth: Int, // =beatBytes * 8
   seMaxNumLoadStreams: Int,
-  seMaxNumStoreStreams: Int
+  seMaxNumStoreStreams: Int,
+
+  rfSize: Int,
+  rfReadPorts: Int,
+  rfWritePorts: Int
 ) {
   val maxLoadMicroStreams: Int = (2 * meshRows + 2 * meshColumns) * maxInitiationInterval
   // Number of elements in a macrostream buffer
@@ -70,7 +74,10 @@ object CommonAcceleratorConfigs {
     seAddressWidth = 32,
     seAxiDataWidth = 64,
     seMaxNumLoadStreams = 4,
-    seMaxNumStoreStreams = 4
+    seMaxNumStoreStreams = 4,
+    rfSize = 2,
+    rfReadPorts = 2,
+    rfWritePorts = 2
   )
 
   val minimalConfig = AcceleratorConfig[UInt](
@@ -96,6 +103,9 @@ object CommonAcceleratorConfigs {
     seAddressWidth = 32,
     seAxiDataWidth = 32,
     seMaxNumLoadStreams = 4,
-    seMaxNumStoreStreams = 4
+    seMaxNumStoreStreams = 4,
+    rfSize = 2,
+    rfReadPorts = 2,
+    rfWritePorts = 2
   )
 }

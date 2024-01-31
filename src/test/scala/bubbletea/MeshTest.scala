@@ -7,14 +7,14 @@ import circt.stage.ChiselStage
 
 class MeshTest extends AnyFlatSpec with ChiselScalatestTester {
   "Mesh" should "do something" in {
-    test(new Mesh(CommonAcceleratorConfigs.defaultConfig)).withAnnotations(Seq()) { dut =>
+    test(new Mesh(CommonAcceleratorConfigs.minimalConfig)).withAnnotations(Seq()) { dut =>
     // test body here
     }
   }
 
   it should "emit Verilog" in {
     ChiselStage.emitSystemVerilogFile(
-      new Mesh(CommonAcceleratorConfigs.defaultConfig),
+      new Mesh(CommonAcceleratorConfigs.minimalConfig),
       firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info")
     )
   }
