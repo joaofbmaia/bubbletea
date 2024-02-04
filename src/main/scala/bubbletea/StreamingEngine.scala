@@ -8,16 +8,19 @@ import chisel3.util.RRArbiter
 import chisel3.util.PriorityEncoder
 import chisel3.util.Counter
 
-class StreamingEngineCtrlBundle[T <: Data](config: AcceleratorConfig[T]) extends Bundle {
+class StreamingEngineStaticConfigurationBundle[T <: Data](config: AcceleratorConfig[T]) extends Bundle {
+  val loadStreamsConfigured = Vec(config.maxSimultaneousLoadMacroStreams, Bool())
+  val storeStreamsConfigured = Vec(config.maxSimultaneousStoreMacroStreams, Bool())
+  val storeStreamsVecLengthMinusOne = Vec(config.maxSimultaneousStoreMacroStreams, UInt(log2Ceil(config.macroStreamDepth).W))
+}
+
+class StreamingEngineControlBundle[T <: Data](config: AcceleratorConfig[T]) extends Bundle {
   val reset = Output(Bool())
   val loadStreamsDone = Input(Bool())
   val storeStreamsDone = Input(Bool())
-  val loadStreamsConfigured = Output(Vec(config.maxSimultaneousLoadMacroStreams, Bool()))
-  val storeStreamsConfigured = Output(Vec(config.maxSimultaneousStoreMacroStreams, Bool()))
-  val storeStreamsVecLengthMinusOne = Output(Vec(config.maxSimultaneousStoreMacroStreams, UInt(log2Ceil(config.macroStreamDepth).W)))
 }
 
-class StreamingEngineCfgBundle[T <: Data](config: AcceleratorConfig[T]) extends Bundle {
+class StreamingEngineConfigurationChannelBundle[T <: Data](config: AcceleratorConfig[T]) extends Bundle {
   val start = Bool()
   val end = Bool()
   val loadStore = Bool()
@@ -49,8 +52,9 @@ class StreamingEngineHpcBundle extends Bundle {
 
 class StreamingEngine[T <: Data](config: AcceleratorConfig[T]) extends Module {
   val io = IO(new Bundle {
-    val control = Flipped(new StreamingEngineCtrlBundle(config))
-    val cfg = Flipped(Decoupled(new StreamingEngineCfgBundle(config)))
+    val control = Flipped(new StreamingEngineControlBundle(config))
+    val staticConfiguration = Input(new StreamingEngineStaticConfigurationBundle(config))
+    val configurationChannel = Flipped(Decoupled(new StreamingEngineConfigurationChannelBundle(config)))
     val loadStreams = Decoupled((Vec(config.maxSimultaneousLoadMacroStreams, Vec(config.macroStreamDepth, config.dataType))))
     val storeStreams = Flipped(Decoupled((Vec(config.maxSimultaneousStoreMacroStreams, Vec(config.macroStreamDepth, config.dataType)))))
     val memory = AXI4Bundle(new AXI4BundleParameters(config.seAddressWidth, config.seAxiDataWidth, 1))
@@ -88,29 +92,29 @@ class StreamingEngine[T <: Data](config: AcceleratorConfig[T]) extends Module {
 
 
   // Configuration channel
-  io.cfg.ready := streamingEngineImpl.io.cpu_out_cfg_ready
-  streamingEngineImpl.io.cpu_in_cfg_valid := io.cfg.valid
-  streamingEngineImpl.io.cpu_in_cfg_sta := io.cfg.bits.start
-  streamingEngineImpl.io.cpu_in_cfg_end := io.cfg.bits.end
-  streamingEngineImpl.io.cpu_in_cfg_type := io.cfg.bits.loadStore
-  streamingEngineImpl.io.cpu_in_cfg_width := io.cfg.bits.elementWidth
-  streamingEngineImpl.io.cpu_in_cfg_stream := io.cfg.bits.stream
-  streamingEngineImpl.io.cpu_in_cfg_mod := io.cfg.bits.mod
-  streamingEngineImpl.io.cpu_in_cfg_vectorize := io.cfg.bits.vectorize
-  streamingEngineImpl.io.cpu_in_cfg_mod_target := io.cfg.bits.modTarget
-  streamingEngineImpl.io.cpu_in_cfg_mod_behaviour := io.cfg.bits.modBehaviour
-  streamingEngineImpl.io.cpu_in_cfg_mod_displacement := io.cfg.bits.modDisplacement
-  streamingEngineImpl.io.cpu_in_cfg_mod_size := io.cfg.bits.modSize
-  streamingEngineImpl.io.cpu_in_cfg_dim_offset := io.cfg.bits.dimOffset
-  streamingEngineImpl.io.cpu_in_cfg_dim_stride := io.cfg.bits.dimStride
-  streamingEngineImpl.io.cpu_in_cfg_dim_size := io.cfg.bits.dimSize
+  io.configurationChannel.ready := streamingEngineImpl.io.cpu_out_cfg_ready
+  streamingEngineImpl.io.cpu_in_cfg_valid := io.configurationChannel.valid
+  streamingEngineImpl.io.cpu_in_cfg_sta := io.configurationChannel.bits.start
+  streamingEngineImpl.io.cpu_in_cfg_end := io.configurationChannel.bits.end
+  streamingEngineImpl.io.cpu_in_cfg_type := io.configurationChannel.bits.loadStore
+  streamingEngineImpl.io.cpu_in_cfg_width := io.configurationChannel.bits.elementWidth
+  streamingEngineImpl.io.cpu_in_cfg_stream := io.configurationChannel.bits.stream
+  streamingEngineImpl.io.cpu_in_cfg_mod := io.configurationChannel.bits.mod
+  streamingEngineImpl.io.cpu_in_cfg_vectorize := io.configurationChannel.bits.vectorize
+  streamingEngineImpl.io.cpu_in_cfg_mod_target := io.configurationChannel.bits.modTarget
+  streamingEngineImpl.io.cpu_in_cfg_mod_behaviour := io.configurationChannel.bits.modBehaviour
+  streamingEngineImpl.io.cpu_in_cfg_mod_displacement := io.configurationChannel.bits.modDisplacement
+  streamingEngineImpl.io.cpu_in_cfg_mod_size := io.configurationChannel.bits.modSize
+  streamingEngineImpl.io.cpu_in_cfg_dim_offset := io.configurationChannel.bits.dimOffset
+  streamingEngineImpl.io.cpu_in_cfg_dim_stride := io.configurationChannel.bits.dimStride
+  streamingEngineImpl.io.cpu_in_cfg_dim_size := io.configurationChannel.bits.dimSize
 
 
   
 
   // Load streams channel
-  val allConfiguredAreValid = (streamingEngineImpl.io.rs_out_valid zip io.control.loadStreamsConfigured).map { case (a, b) => a || !b }.reduce(_ && _)
-  val allUnconfigured = !io.control.loadStreamsConfigured.reduce(_ || _)
+  val allConfiguredAreValid = (streamingEngineImpl.io.rs_out_valid zip io.staticConfiguration.loadStreamsConfigured).map { case (a, b) => a || !b }.reduce(_ && _)
+  val allUnconfigured = !io.staticConfiguration.loadStreamsConfigured.reduce(_ || _)
   val loadValid = allConfiguredAreValid && !allUnconfigured
   io.loadStreams.valid := loadValid
 
@@ -136,7 +140,7 @@ class StreamingEngine[T <: Data](config: AcceleratorConfig[T]) extends Module {
     }
   }
 
-  io.control.loadStreamsDone := (loadStreamsDoneReg === io.control.loadStreamsConfigured) && io.control.loadStreamsConfigured.reduce(_ || _)
+  io.control.loadStreamsDone := (loadStreamsDoneReg === io.staticConfiguration.loadStreamsConfigured) && io.staticConfiguration.loadStreamsConfigured.reduce(_ || _)
 
 
 
@@ -155,10 +159,10 @@ class StreamingEngine[T <: Data](config: AcceleratorConfig[T]) extends Module {
   val storeStreamsWithMetadata = Wire(Vec(config.maxSimultaneousStoreMacroStreams, Decoupled(new storeStreamBundle)))
 
   for (i <- 0 until config.maxSimultaneousStoreMacroStreams) {
-    storeStreamsWithMetadata(i).valid := io.storeStreams.valid && io.control.storeStreamsConfigured(i)
+    storeStreamsWithMetadata(i).valid := io.storeStreams.valid && io.staticConfiguration.storeStreamsConfigured(i)
     storeStreamsWithMetadata(i).bits.streamId := storeStreamIdBase.U + i.U
     storeStreamsWithMetadata(i).bits.vecData := io.storeStreams.bits(i)
-    storeStreamsWithMetadata(i).bits.vecLengthMinusOne := io.control.storeStreamsVecLengthMinusOne(i)
+    storeStreamsWithMetadata(i).bits.vecLengthMinusOne := io.staticConfiguration.storeStreamsVecLengthMinusOne(i)
   }
 
   // Register to keep track of which store stream has already been read by the arbiter
@@ -169,7 +173,7 @@ class StreamingEngine[T <: Data](config: AcceleratorConfig[T]) extends Module {
     }
   }
   val numStoreStreamsFired = storeStreamFired.count(identity)
-  val numberOfConfiguredStoreStreams = io.control.storeStreamsConfigured.count(identity)
+  val numberOfConfiguredStoreStreams = io.staticConfiguration.storeStreamsConfigured.count(identity)
 
   val anyStoreSteamFireNow = storeStreamsWithMetadata.map(_.fire).reduce(_ || _)
 
