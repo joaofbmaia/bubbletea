@@ -18,6 +18,7 @@ class StreamingStage[T <: Data](config: AcceleratorConfig[T]) extends Module {
 
     val meshRun = Input(Bool())
     val meshFire = Output(Bool())
+    val done = Output(Bool())
 
     val initiationIntervalMinusOne = Input(UInt(log2Ceil(config.maxInitiationInterval).W))
     
@@ -32,7 +33,7 @@ class StreamingStage[T <: Data](config: AcceleratorConfig[T]) extends Module {
   val meshFire = Wire(Bool())
 
   // Modulo cycle counter
-  val currentModuloCycle = RegInit(0.U(log2Ceil(config.maxInitiationInterval).W))
+  val currentModuloCycle = withReset(reset.asBool || io.streamingEngineCtrl.reset)(RegInit(0.U(log2Ceil(config.maxInitiationInterval).W)))
 
   val lastCycle = currentModuloCycle === io.initiationIntervalMinusOne
 
@@ -86,8 +87,9 @@ class StreamingStage[T <: Data](config: AcceleratorConfig[T]) extends Module {
   // Control
   val microStreamsRegReady = Wire(Bool())
   microStreamsRegReady := !lastCycle || storeRemaper.io.microStreamsIn.ready //if (lastCycle) storeRemaper.io.microStreamsIn.ready else true.B
-  meshFire := io.meshRun && loadRemaper.io.microStreamsOut.valid && microStreamsRegReady
+  meshFire := io.meshRun && (loadRemaper.io.microStreamsOut.valid || streamingEngine.io.control.loadStreamsDone) && microStreamsRegReady
   loadRemaper.io.microStreamsOut.ready := lastCycle && meshFire //lastCycle && storeRemaper.io.microStreamsIn.ready
   storeRemaper.io.microStreamsIn.valid := lastCycle && meshFire
   io.meshFire := meshFire
+  io.done := streamingEngine.io.control.storeStreamsDone
 }

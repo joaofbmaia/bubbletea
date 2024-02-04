@@ -6,11 +6,12 @@ import freechips.rocketchip.amba.axi4.{AXI4Bundle, AXI4BundleParameters}
 import chisel3.util.log2Ceil
 import chisel3.util.RRArbiter
 import chisel3.util.PriorityEncoder
+import chisel3.util.Counter
 
 class StreamingEngineCtrlBundle[T <: Data](config: AcceleratorConfig[T]) extends Bundle {
   val reset = Output(Bool())
-  val loadStreamsDone = Input(Vec(config.maxSimultaneousLoadMacroStreams, Bool()))
-  val loadStreamsCompleted = Input(Vec(config.maxSimultaneousLoadMacroStreams, Vec(config.seMaxStreamDims, Bool())))
+  val loadStreamsDone = Input(Bool())
+  val storeStreamsDone = Input(Bool())
   val loadStreamsConfigured = Output(Vec(config.maxSimultaneousLoadMacroStreams, Bool()))
   val storeStreamsConfigured = Output(Vec(config.maxSimultaneousStoreMacroStreams, Bool()))
   val storeStreamsVecLengthMinusOne = Output(Vec(config.maxSimultaneousStoreMacroStreams, UInt(log2Ceil(config.macroStreamDepth).W)))
@@ -83,11 +84,6 @@ class StreamingEngine[T <: Data](config: AcceleratorConfig[T]) extends Module {
 
   // Control
   streamingEngineImpl.io.ctrl_reset := io.control.reset
-  for (i <- 0 until config.maxSimultaneousLoadMacroStreams) {
-    io.control.loadStreamsCompleted(i) := streamingEngineImpl.io.rs_out_completed(i).asTypeOf(Vec(config.seMaxStreamDims, Bool()))
-  }
-  io.control.loadStreamsDone := streamingEngineImpl.io.rs_out_done
-
 
 
 
@@ -128,6 +124,19 @@ class StreamingEngine[T <: Data](config: AcceleratorConfig[T]) extends Module {
     //streamingEngineImpl.io.rs_in_predicate(i) is not used
   }
 
+  // streamingEngineImpl.io.rs_out_completed is unused
+
+
+  // Handle the all done signal for the load streams
+  val loadStreamsDoneReg = withReset(reset.asBool || io.control.reset)(RegInit(VecInit(Seq.fill(config.maxSimultaneousLoadMacroStreams)(false.B))))
+
+  for (i <- 0 until config.maxSimultaneousLoadMacroStreams) {
+    when (streamingEngineImpl.io.rs_out_done(i)) {
+      loadStreamsDoneReg(i) := true.B
+    }
+  }
+
+  io.control.loadStreamsDone := (loadStreamsDoneReg === io.control.loadStreamsConfigured) && io.control.loadStreamsConfigured.reduce(_ || _)
 
 
 
@@ -153,7 +162,7 @@ class StreamingEngine[T <: Data](config: AcceleratorConfig[T]) extends Module {
   }
 
   // Register to keep track of which store stream has already been read by the arbiter
-  val storeStreamFired = RegInit(VecInit(Seq.fill(config.maxSimultaneousStoreMacroStreams)(false.B)))
+  val storeStreamFired = withReset(reset.asBool || io.control.reset)(RegInit(VecInit(Seq.fill(config.maxSimultaneousStoreMacroStreams)(false.B))))
   for (i <- 0 until config.maxSimultaneousStoreMacroStreams) {
     when(storeStreamsWithMetadata(i).fire) {
       storeStreamFired(i) := true.B
@@ -187,7 +196,17 @@ class StreamingEngine[T <: Data](config: AcceleratorConfig[T]) extends Module {
   storePredicate := (-1.S(storePredicate.getWidth.W).asUInt >> (((config.macroStreamDepth.U - 1.U) - storeStreamArbiter.io.out.bits.vecLengthMinusOne) * (config.dataType.getWidth / 8).U)).asUInt
   streamingEngineImpl.io.rd_in_predicate := storePredicate
 
+  // Handle the all done signal for the store streams
+  val storeStreamsDoneCounter = withReset(reset.asBool || io.control.reset)(Counter(config.maxSimultaneousStoreMacroStreams + 1))
+  when (streamingEngineImpl.io.rd_out_done) {
+    storeStreamsDoneCounter.inc()
+  }
 
+  val storeStreamsDone = withReset(reset.asBool || io.control.reset)(RegInit(false.B))
+  when ((storeStreamsDoneCounter.value === numberOfConfiguredStoreStreams) && numberOfConfiguredStoreStreams =/= 0.U && streamingEngineImpl.io.rd_out_store_request_successful) {
+    storeStreamsDone := true.B
+  }
+  io.control.storeStreamsDone := storeStreamsDone
 
 
 

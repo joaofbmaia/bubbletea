@@ -161,7 +161,7 @@ class StreamingStageTest extends AnyFlatSpec with ChiselScalatestTester {
       dut.clock.step(1)
       dut.io.meshRun.poke(true.B)
 
-      dut.clock.step(300)
+      dut.clock.step(800)
     }
   }
 

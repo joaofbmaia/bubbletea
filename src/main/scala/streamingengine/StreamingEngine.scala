@@ -101,6 +101,8 @@ extends Module {
         val rd_in_predicate = Input(UInt(VEC_NUM_BYTES.W))
         val rd_out_ready    = Output(Bool())
         val rd_out_width    = Output(UInt(2.W))
+        val rd_out_done     = Output(Bool())
+        val rd_out_store_request_successful = Output(Bool())
 
         /* AXI Read Address Channel */
         val axi_ar_ready = Input(Bool())
@@ -357,6 +359,8 @@ extends Module {
 
     io.rd_out_ready := SMMU.io.rd_out_ready
     io.rd_out_width := SMMU.io.rd_out_width
+    io.rd_out_done  := SMMU.io.rd_out_done
+    io.rd_out_store_request_successful := SMMU.io.rd_out_store_request_successful
 
     io.axi_ar_addr  := LMMU.io.axi_ar_addr
     io.axi_ar_valid := LMMU.io.axi_ar_valid

@@ -129,6 +129,10 @@ extends Module {
         val rd_in_predicate	  		= Input(UInt(VEC_NUM_BYTES.W))
         val rd_out_ready          	= Output(Bool())
         val rd_out_width           	= Output(UInt(2.W))
+				val rd_out_done           = Output(Bool())
+
+			// Special signal for singaling that the last store request was successful (this is only valid (or relevant) after the rd_out_done signal is high)
+			val rd_out_store_request_successful = Output(Bool())
 
 		/* Stream State channel */
         val ss_in_mmu_idx    		= Input(UInt(log2Ceil(SMMU_NUM_TABLES).W))
@@ -223,6 +227,7 @@ extends Module {
 
 	val rd_out_ready = Wire(Bool())
 	val rd_out_width = Wire(UInt(2.W))
+	val rd_out_done = Wire(Bool())
 	
 	val table_idx = Wire(UInt(log2Ceil(SMMU_NUM_TABLES).W))
 	val write_idx = Wire(UInt(log2Ceil(SMMU_NUM_ADDRESSES).W))
@@ -446,7 +451,7 @@ extends Module {
 	
 	axi_b_ready		:= false.B
 
-
+	rd_out_done		:= false.B
 
     /* A finite state machine manages the AXI protocol
      * transactions. It transitions to different states
@@ -602,6 +607,12 @@ extends Module {
 					store_state := STATE_WAIT_AWREADY
 				}
 
+				/* Signal that the stream has ended */
+        rd_out_done := true.B
+
+			}
+			.otherwise {
+				rd_out_done := false.B
 			}
 
 
@@ -774,6 +785,8 @@ extends Module {
 	}
 
 
+	// After a done signal is issued, a last store request happens, and only after returning from the BVALID state, the store request is considered successful
+	io.rd_out_store_request_successful := store_state === STATE_WAIT_PAIR
 
 
 
@@ -785,6 +798,7 @@ extends Module {
 
 	io.rd_out_ready    := rd_out_ready
 	io.rd_out_width    := rd_out_width
+	io.rd_out_done		 := rd_out_done
 
 	io.ss_out_trigger  := Mux(io.ss_in_addr_valid, ss_out_trigger, false.B)
 
