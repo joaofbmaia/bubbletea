@@ -5,7 +5,7 @@ import chisel3.util.log2Ceil
 import chisel3.util.Decoupled
 import freechips.rocketchip.amba.axi4.{AXI4Bundle, AXI4BundleParameters}
 
-class AcceleratorTop[T <: Data: Arithmetic](config: AcceleratorConfig[T]) extends Module {
+class AcceleratorTop[T <: Data: Arithmetic](val config: AcceleratorConfig[T]) extends Module {
   val io = IO(new Bundle {
     val configuration = Input(new ConfigurationBundle(config))
     val globalControl = Flipped(new ControlBundle)
