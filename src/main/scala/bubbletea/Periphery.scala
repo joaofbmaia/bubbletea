@@ -24,16 +24,24 @@ trait CanHavePeripheryUIntBubbletea { this: BaseSubsystem =>
 
 trait CanHavePeripherySIntBubbletea { this: BaseSubsystem =>
   p(SIntBubbleteaKey).map { params =>
-    val bubbletea = LazyModule(new Bubbletea(params))
-    pbus.coupleTo("bubbletea-control") { bubbletea.controlNode := TLFragmenter(pbus.beatBytes, pbus.blockBytes) := _ }
-    fbus.coupleFrom("bubbletea-dma") { _ := bubbletea.dmaNode }
+    // assumes pbus/sbus/ibus are on the same clock
+    val bubbleteaDomain = sbus.generateSynchronousDomain
+    bubbleteaDomain {
+      val bubbletea = LazyModule(new Bubbletea(params))
+      pbus.coupleTo("bubbletea-control") { bubbletea.controlNode := TLFragmenter(pbus.beatBytes, pbus.blockBytes) := _ }
+      fbus.coupleFrom("bubbletea-dma") { _ := bubbletea.dmaNode }
+    }
   }
 }
 
 trait CanHavePeripheryFloatBubbletea { this: BaseSubsystem =>
   p(FloatBubbleteaKey).map { params =>
-    val bubbletea = LazyModule(new Bubbletea(params))
-    pbus.coupleTo("bubbletea-control") { bubbletea.controlNode := TLFragmenter(pbus.beatBytes, pbus.blockBytes) := _ }
-    fbus.coupleFrom("bubbletea-dma") { _ := bubbletea.dmaNode }
+    // assumes pbus/sbus/ibus are on the same clock
+    val bubbleteaDomain = sbus.generateSynchronousDomain
+    bubbleteaDomain {
+      val bubbletea = LazyModule(new Bubbletea(params))
+      pbus.coupleTo("bubbletea-control") { bubbletea.controlNode := TLFragmenter(pbus.beatBytes, pbus.blockBytes) := _ }
+      fbus.coupleFrom("bubbletea-dma") { _ := bubbletea.dmaNode }
+    }
   }
 }
