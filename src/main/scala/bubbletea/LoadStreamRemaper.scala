@@ -8,26 +8,26 @@ object LoadStreamRemaper {
   val latency = 1
 }
 
-class LoadStreamRemaper[T <: Data](config: AcceleratorConfig[T]) extends Module {
+class LoadStreamRemaper[T <: Data](params: BubbleteaParams[T]) extends Module {
   import LoadStreamRemaper._
-  assert(config.maxSimultaneousLoadMacroStreams * config.macroStreamDepth == config.maxInitiationInterval * (2 * config.meshRows + 2 * config.meshColumns), "Number of macro stream elements must equal number of micro stream elements")
+  assert(params.maxSimultaneousLoadMacroStreams * params.macroStreamDepth == params.maxInitiationInterval * (2 * params.meshRows + 2 * params.meshColumns), "Number of macro stream elements must equal number of micro stream elements")
   val io = IO(new Bundle {
-    val macroStreamsIn = Flipped(Decoupled(Vec(config.maxSimultaneousLoadMacroStreams, Vec(config.macroStreamDepth, config.dataType))))
-    val microStreamsOut = Decoupled(Vec(config.maxInitiationInterval, new MeshData(config)))
-    val remaperSwitchesSetup = Input(Vec(config.numberOfLoadRemaperSwitchStages, Vec(config.numberOfLoadRemaperSwitchesPerStage, Bool())))
+    val macroStreamsIn = Flipped(Decoupled(Vec(params.maxSimultaneousLoadMacroStreams, Vec(params.macroStreamDepth, params.dataType))))
+    val microStreamsOut = Decoupled(Vec(params.maxInitiationInterval, new MeshData(params)))
+    val remaperSwitchesSetup = Input(Vec(params.numberOfLoadRemaperSwitchStages, Vec(params.numberOfLoadRemaperSwitchesPerStage, Bool())))
   })
 
   val macroStreams = io.macroStreamsIn.bits
-  val microStreams = Wire(Vec(config.maxInitiationInterval, new MeshData(config)))
+  val microStreams = Wire(Vec(params.maxInitiationInterval, new MeshData(params)))
 
   val upstreamValid = Wire(Bool())
   val upstreamReady = Wire(Bool())
   val downstreamValid = Wire(Bool())
   val downstreamReady = Wire(Bool())
 
-  val permutationNetwork = Module(new PermutationNetwork(config.dataType, config.numberOfLoadRemaperElements))
+  val permutationNetwork = Module(new PermutationNetwork(params.dataType, params.numberOfLoadRemaperElements))
 
-  permutationNetwork.io.in := macroStreams.asTypeOf(Vec(config.numberOfLoadRemaperElements, config.dataType))
+  permutationNetwork.io.in := macroStreams.asTypeOf(Vec(params.numberOfLoadRemaperElements, params.dataType))
   permutationNetwork.io.select := io.remaperSwitchesSetup
   microStreams := permutationNetwork.io.out.asTypeOf(microStreams)
 

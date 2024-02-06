@@ -7,14 +7,14 @@ import circt.stage.ChiselStage
 
 class StreamingEngineTest extends AnyFlatSpec with ChiselScalatestTester {
   // "StreamingEngine" should "do something" in {
-  //   test(new StreamingEngine(CommonAcceleratorConfigs.minimalConfig)).withAnnotations(Seq()) { dut =>
+  //   test(new StreamingEngine(CommonBubbleteaParams.minimalConfig)).withAnnotations(Seq()) { dut =>
   //   // test body here
   //   }
   // }
 
   "StreamingEngine" should "emit Verilog" in {
     ChiselStage.emitSystemVerilogFile(
-      new StreamingEngine(CommonAcceleratorConfigs.minimalConfig),
+      new StreamingEngine(CommonBubbleteaParams.minimalConfig),
       firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info")
     )
   }

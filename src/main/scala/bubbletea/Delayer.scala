@@ -3,39 +3,39 @@ package bubbletea
 import chisel3._
 import chisel3.util.log2Ceil
 
-class DelayerBundle[T <: Data](config: AcceleratorConfig[T]) extends Bundle{
-  val north = Vec(config.meshColumns, UInt(log2Ceil(config.maxMeshLatency + 1).W))
-  val south = Vec(config.meshColumns, UInt(log2Ceil(config.maxMeshLatency + 1).W))
-  val west = Vec(config.meshRows, UInt(log2Ceil(config.maxMeshLatency + 1).W))
-  val east = Vec(config.meshRows, UInt(log2Ceil(config.maxMeshLatency + 1).W))
+class DelayerBundle[T <: Data](params: BubbleteaParams[T]) extends Bundle{
+  val north = Vec(params.meshColumns, UInt(log2Ceil(params.maxMeshLatency + 1).W))
+  val south = Vec(params.meshColumns, UInt(log2Ceil(params.maxMeshLatency + 1).W))
+  val west = Vec(params.meshRows, UInt(log2Ceil(params.maxMeshLatency + 1).W))
+  val east = Vec(params.meshRows, UInt(log2Ceil(params.maxMeshLatency + 1).W))
 }
 
-class DelayerConfigBundle[T <: Data](config: AcceleratorConfig[T]) extends Bundle{
-  val loads = new DelayerBundle(config)
-  val stores = new DelayerBundle(config)
+class DelayerConfigBundle[T <: Data](params: BubbleteaParams[T]) extends Bundle{
+  val loads = new DelayerBundle(params)
+  val stores = new DelayerBundle(params)
 }
 
-class Delayer[T <: Data: Arithmetic](config: AcceleratorConfig[T]) extends Module {
+class Delayer[T <: Data: Arithmetic](params: BubbleteaParams[T]) extends Module {
   val io = IO(new Bundle {
     val fire = Input(Bool())
 
-    val loadsIn = Input(new MeshData(config))
-    val meshLoadsOut = Output(new MeshData(config))
-    val meshStoresIn = Input(new MeshData(config))
-    val storesOut = Output(new MeshData(config))
+    val loadsIn = Input(new MeshData(params))
+    val meshLoadsOut = Output(new MeshData(params))
+    val meshStoresIn = Input(new MeshData(params))
+    val storesOut = Output(new MeshData(params))
 
-    val configuration = Input(new DelayerConfigBundle(config))
+    val configuration = Input(new DelayerConfigBundle(params))
   })
 
-  val loadDelaysNorth = Seq.fill(config.meshColumns)(Module(new VariablePipe(config.dataType, config.maxMeshLatency)))
-  val loadDelaysSouth = Seq.fill(config.meshColumns)(Module(new VariablePipe(config.dataType, config.maxMeshLatency)))
-  val loadDelaysWest = Seq.fill(config.meshRows)(Module(new VariablePipe(config.dataType, config.maxMeshLatency)))
-  val loadDelaysEast = Seq.fill(config.meshRows)(Module(new VariablePipe(config.dataType, config.maxMeshLatency)))
+  val loadDelaysNorth = Seq.fill(params.meshColumns)(Module(new VariablePipe(params.dataType, params.maxMeshLatency)))
+  val loadDelaysSouth = Seq.fill(params.meshColumns)(Module(new VariablePipe(params.dataType, params.maxMeshLatency)))
+  val loadDelaysWest = Seq.fill(params.meshRows)(Module(new VariablePipe(params.dataType, params.maxMeshLatency)))
+  val loadDelaysEast = Seq.fill(params.meshRows)(Module(new VariablePipe(params.dataType, params.maxMeshLatency)))
 
-  val storeDelaysNorth = Seq.fill(config.meshColumns)(Module(new VariablePipe(config.dataType, config.maxMeshLatency)))
-  val storeDelaysSouth = Seq.fill(config.meshColumns)(Module(new VariablePipe(config.dataType, config.maxMeshLatency)))
-  val storeDelaysWest = Seq.fill(config.meshRows)(Module(new VariablePipe(config.dataType, config.maxMeshLatency)))
-  val storeDelaysEast = Seq.fill(config.meshRows)(Module(new VariablePipe(config.dataType, config.maxMeshLatency)))
+  val storeDelaysNorth = Seq.fill(params.meshColumns)(Module(new VariablePipe(params.dataType, params.maxMeshLatency)))
+  val storeDelaysSouth = Seq.fill(params.meshColumns)(Module(new VariablePipe(params.dataType, params.maxMeshLatency)))
+  val storeDelaysWest = Seq.fill(params.meshRows)(Module(new VariablePipe(params.dataType, params.maxMeshLatency)))
+  val storeDelaysEast = Seq.fill(params.meshRows)(Module(new VariablePipe(params.dataType, params.maxMeshLatency)))
   
   loadDelaysNorth.zipWithIndex.foreach { case (delay, i) =>
     delay.io.valid := io.fire

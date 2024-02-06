@@ -7,14 +7,14 @@ import circt.stage.ChiselStage
 
 class MeshWithDelaysTest extends AnyFlatSpec with ChiselScalatestTester {
   "MeshWithDelays" should "do something" in {
-    test(new MeshWithDelays(CommonAcceleratorConfigs.minimalConfig)).withAnnotations(Seq()) { dut =>
+    test(new MeshWithDelays(CommonBubbleteaParams.minimalConfig)).withAnnotations(Seq()) { dut =>
     // test body here
     }
   }
 
   it should "emit Verilog" in {
     ChiselStage.emitSystemVerilogFile(
-      new MeshWithDelays(CommonAcceleratorConfigs.minimalConfig),
+      new MeshWithDelays(CommonBubbleteaParams.minimalConfig),
       firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info")
     )
   }

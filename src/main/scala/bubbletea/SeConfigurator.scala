@@ -4,16 +4,16 @@ import chisel3._
 import chisel3.util.Decoupled
 import chisel3.util._
 
-class StreamingEngineCompressedConfigurationChannelBundle[T <: Data](config: AcceleratorConfig[T]) extends Bundle {
+class StreamingEngineCompressedConfigurationChannelBundle[T <: Data](params: BubbleteaParams[T]) extends Bundle {
   val isValid = Bool()
-  val stream = UInt(config.seStreamIdWidth.W)
+  val stream = UInt(params.seStreamIdWidth.W)
   val elementWidth = UInt(2.W) //should be enum
   val loadStoreOrMod = Bool()
-  val dimOffsetOrModSize = UInt((config.seOffsetWidth max config.seSizeWidth).W)
-  val dimSizeOtModTargetAndModBehaviour = UInt((config.seSizeWidth max 3/*2 bits for target and 1 for behaviour*/).W)
+  val dimOffsetOrModSize = UInt((params.seOffsetWidth max params.seSizeWidth).W)
+  val dimSizeOtModTargetAndModBehaviour = UInt((params.seSizeWidth max 3/*2 bits for target and 1 for behaviour*/).W)
   val end = Bool()
   val start = Bool()
-  val dimStrideOrModDisplacement = UInt(config.seStrideWidth.W)
+  val dimStrideOrModDisplacement = UInt(params.seStrideWidth.W)
   val vectorize = Bool()
 }
 
@@ -23,11 +23,11 @@ class SeConfiguratorControlBundle extends Bundle {
   val done = Input(Bool())
 }
 
-class SeConfigurator[T <: Data](config: AcceleratorConfig[T]) extends Module {
+class SeConfigurator[T <: Data](params: BubbleteaParams[T]) extends Module {
   val io = IO(new Bundle {
     val control = Flipped(new SeConfiguratorControlBundle)
-    val configurationMemoryInput = Input(Vec(config.maxConfigurationInstructions, new StreamingEngineCompressedConfigurationChannelBundle(config)))
-    val seOutput = Decoupled(new StreamingEngineConfigurationChannelBundle(config))
+    val configurationMemoryInput = Input(Vec(params.maxConfigurationInstructions, new StreamingEngineCompressedConfigurationChannelBundle(params)))
+    val seOutput = Decoupled(new StreamingEngineConfigurationChannelBundle(params))
   })
 
   object State extends ChiselEnum {
@@ -35,7 +35,7 @@ class SeConfigurator[T <: Data](config: AcceleratorConfig[T]) extends Module {
   }
 
   val state = withReset(reset.asBool || io.control.reset)(RegInit(State.ready))
-  val instructionCounter = withReset(reset.asBool || io.control.reset)(Counter(config.maxConfigurationInstructions))
+  val instructionCounter = withReset(reset.asBool || io.control.reset)(Counter(params.maxConfigurationInstructions))
 
   // Decode the compressed instruction
   val compressedInstruction = io.configurationMemoryInput(instructionCounter.value)

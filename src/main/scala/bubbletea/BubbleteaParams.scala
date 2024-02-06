@@ -3,7 +3,7 @@ package bubbletea
 import chisel3._
 import chisel3.util.log2Ceil
 
-trait AcceleratorConfig[T <: Data] {
+trait BubbleteaParams[T <: Data] {
   val baseAddress : BigInt
 
   val dataType:    T
@@ -13,7 +13,7 @@ trait AcceleratorConfig[T <: Data] {
   val maxSimultaneousLoadMacroStreams: Int
   val maxSimultaneousStoreMacroStreams : Int
 
-  val maxConfigurationInstructions : Int // = (config.seMaxNumLoadStreams + config.seMaxNumStoreStreams) * (config.seMaxStreamDims + config.seMaxStreamMods + 1 /*for the cgf.vec instruction*/)
+  val maxConfigurationInstructions : Int // = (params.seMaxNumLoadStreams + params.seMaxNumStoreStreams) * (params.seMaxStreamDims + params.seMaxStreamMods + 1 /*for the cgf.vec instruction*/)
 
   val seMaxStreamDims: Int
   val seMaxStreamMods: Int
@@ -55,10 +55,10 @@ trait AcceleratorConfig[T <: Data] {
 
   // needs updating
   override def toString: String = 
-    s"AcceleratorConfig(\n  dataType = $dataType,\n  meshRows = $meshRows,\n  meshColumns = $meshColumns,\n  maxInitiationInterval = $maxInitiationInterval,\n  maxSimultaneousLoadMacroStreams = $maxSimultaneousLoadMacroStreams,\n  maxLoadMicroStreams = $maxLoadMicroStreams,\n  macroStreamDepth = $macroStreamDepth\n)"
+    s"BubbleteaParams(\n  dataType = $dataType,\n  meshRows = $meshRows,\n  meshColumns = $meshColumns,\n  maxInitiationInterval = $maxInitiationInterval,\n  maxSimultaneousLoadMacroStreams = $maxSimultaneousLoadMacroStreams,\n  maxLoadMicroStreams = $maxLoadMicroStreams,\n  macroStreamDepth = $macroStreamDepth\n)"
 }
 
-case class UIntAcceleratorConfig(
+case class UIntBubbleteaParams(
   baseAddress : BigInt,
 
   dataType:    UInt,
@@ -68,7 +68,7 @@ case class UIntAcceleratorConfig(
   maxSimultaneousLoadMacroStreams: Int,
   maxSimultaneousStoreMacroStreams : Int,
 
-  maxConfigurationInstructions : Int, // = (config.seMaxNumLoadStreams + config.seMaxNumStoreStreams) * (config.seMaxStreamDims + config.seMaxStreamMods + 1 /*for the cgf.vec instruction*/)
+  maxConfigurationInstructions : Int, // = (params.seMaxNumLoadStreams + params.seMaxNumStoreStreams) * (params.seMaxStreamDims + params.seMaxStreamMods + 1 /*for the cgf.vec instruction*/)
 
   seMaxStreamDims: Int,
   seMaxStreamMods: Int,
@@ -94,9 +94,9 @@ case class UIntAcceleratorConfig(
   rfWritePorts: Int,
 
   maxMeshLatency: Int
-) extends AcceleratorConfig[UInt]
+) extends BubbleteaParams[UInt]
 
-case class SIntAcceleratorConfig(
+case class SIntBubbleteaParams(
   baseAddress : BigInt,
 
   dataType:    SInt,
@@ -106,7 +106,7 @@ case class SIntAcceleratorConfig(
   maxSimultaneousLoadMacroStreams: Int,
   maxSimultaneousStoreMacroStreams : Int,
 
-  maxConfigurationInstructions : Int, // = (config.seMaxNumLoadStreams + config.seMaxNumStoreStreams) * (config.seMaxStreamDims + config.seMaxStreamMods + 1 /*for the cgf.vec instruction*/)
+  maxConfigurationInstructions : Int, // = (params.seMaxNumLoadStreams + params.seMaxNumStoreStreams) * (params.seMaxStreamDims + params.seMaxStreamMods + 1 /*for the cgf.vec instruction*/)
 
   seMaxStreamDims: Int,
   seMaxStreamMods: Int,
@@ -132,9 +132,9 @@ case class SIntAcceleratorConfig(
   rfWritePorts: Int,
 
   maxMeshLatency: Int
-) extends AcceleratorConfig[SInt]
+) extends BubbleteaParams[SInt]
 
-case class FloatAcceleratorConfig(
+case class FloatBubbleteaParams(
   baseAddress : BigInt,
 
   dataType:    Float,
@@ -144,7 +144,7 @@ case class FloatAcceleratorConfig(
   maxSimultaneousLoadMacroStreams: Int,
   maxSimultaneousStoreMacroStreams : Int,
 
-  maxConfigurationInstructions : Int, // = (config.seMaxNumLoadStreams + config.seMaxNumStoreStreams) * (config.seMaxStreamDims + config.seMaxStreamMods + 1 /*for the cgf.vec instruction*/)
+  maxConfigurationInstructions : Int, // = (params.seMaxNumLoadStreams + params.seMaxNumStoreStreams) * (params.seMaxStreamDims + params.seMaxStreamMods + 1 /*for the cgf.vec instruction*/)
 
   seMaxStreamDims: Int,
   seMaxStreamMods: Int,
@@ -170,10 +170,10 @@ case class FloatAcceleratorConfig(
   rfWritePorts: Int,
 
   maxMeshLatency: Int
-) extends AcceleratorConfig[Float]
+) extends BubbleteaParams[Float]
 
-object CommonAcceleratorConfigs {
-  val defaultConfig = SIntAcceleratorConfig(
+object CommonBubbleteaParams {
+  val defaultConfig = SIntBubbleteaParams(
     baseAddress = 0x10080000,
     dataType = SInt(32.W),
     meshRows = 4,
@@ -204,7 +204,7 @@ object CommonAcceleratorConfigs {
     maxMeshLatency = 4
   )
 
-  val minimalConfig = UIntAcceleratorConfig(
+  val minimalConfig = UIntBubbleteaParams(
     baseAddress = 0x10080000,
     dataType = UInt(8.W),
     meshRows = 2,

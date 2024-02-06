@@ -10,8 +10,8 @@ import chisel3.experimental.BundleLiterals._
 
 class StreamingStageTest extends AnyFlatSpec with ChiselScalatestTester {
   "StreamingStage" should "do something" in {
-    test(new StreamingStageWithMemory(CommonAcceleratorConfigs.minimalConfig, 10, 2, 2)).withAnnotations(Seq(VerilatorBackendAnnotation, WriteVcdAnnotation)) { dut =>
-      val memoryDataWidth = CommonAcceleratorConfigs.minimalConfig.seLlbNumBytes * 8
+    test(new StreamingStageWithMemory(CommonBubbleteaParams.minimalConfig, 10, 2, 2)).withAnnotations(Seq(VerilatorBackendAnnotation, WriteVcdAnnotation)) { dut =>
+      val memoryDataWidth = CommonBubbleteaParams.minimalConfig.seLlbNumBytes * 8
       val loadRemaperSetup = PermutationNetworkUtils.generateSwitchSettingsFromDstMask(
         Seq(
           Seq(
@@ -35,8 +35,8 @@ class StreamingStageTest extends AnyFlatSpec with ChiselScalatestTester {
             RemaperMask(used = false, side = Side.East, index = 0, moduloCycle = 0)
           )
         ),
-        rows = CommonAcceleratorConfigs.minimalConfig.meshRows,
-        columns = CommonAcceleratorConfigs.minimalConfig.meshColumns
+        rows = CommonBubbleteaParams.minimalConfig.meshRows,
+        columns = CommonBubbleteaParams.minimalConfig.meshColumns
       )
       // fill first 256 bytes of memory with linear pattern
       dut.io.memWriteEnable.poke(true.B)
@@ -53,7 +53,7 @@ class StreamingStageTest extends AnyFlatSpec with ChiselScalatestTester {
       dut.io.memWriteEnable.poke(false.B)
       dut.clock.step(1)
 
-      for (i <- 0 until CommonAcceleratorConfigs.minimalConfig.maxSimultaneousLoadMacroStreams) {
+      for (i <- 0 until CommonBubbleteaParams.minimalConfig.maxSimultaneousLoadMacroStreams) {
         dut.io.staticConfiguration.streamingEngine.loadStreamsConfigured(i).poke(false.B)
       }
       
@@ -151,8 +151,8 @@ class StreamingStageTest extends AnyFlatSpec with ChiselScalatestTester {
       dut.io.staticConfiguration.streamingEngine.storeStreamsVecLengthMinusOne(1).poke(1.U)
 
       // configure remaper
-      for (i <- 0 until CommonAcceleratorConfigs.minimalConfig.numberOfLoadRemaperSwitchStages) {
-        for (j <- 0 until CommonAcceleratorConfigs.minimalConfig.numberOfLoadRemaperSwitchesPerStage) {
+      for (i <- 0 until CommonBubbleteaParams.minimalConfig.numberOfLoadRemaperSwitchStages) {
+        for (j <- 0 until CommonBubbleteaParams.minimalConfig.numberOfLoadRemaperSwitchesPerStage) {
           dut.io.staticConfiguration.loadRemaperSwitchesSetup(i)(j).poke(loadRemaperSetup(i)(j))
         }
       }
@@ -166,8 +166,8 @@ class StreamingStageTest extends AnyFlatSpec with ChiselScalatestTester {
   }
 
   it should "do something2" in {
-    test(new StreamingStageWithMemory(CommonAcceleratorConfigs.minimalConfig, 10, 2, 2)).withAnnotations(Seq(VerilatorBackendAnnotation, WriteVcdAnnotation)) { dut =>
-      val memoryDataWidth = CommonAcceleratorConfigs.minimalConfig.seLlbNumBytes * 8
+    test(new StreamingStageWithMemory(CommonBubbleteaParams.minimalConfig, 10, 2, 2)).withAnnotations(Seq(VerilatorBackendAnnotation, WriteVcdAnnotation)) { dut =>
+      val memoryDataWidth = CommonBubbleteaParams.minimalConfig.seLlbNumBytes * 8
       val loadRemaperSetup = PermutationNetworkUtils.generateSwitchSettingsFromDstMask(
         Seq(
           Seq(
@@ -191,8 +191,8 @@ class StreamingStageTest extends AnyFlatSpec with ChiselScalatestTester {
             RemaperMask(used = false, side = Side.East, index = 0, moduloCycle = 0)
           )
         ),
-        rows = CommonAcceleratorConfigs.minimalConfig.meshRows,
-        columns = CommonAcceleratorConfigs.minimalConfig.meshColumns
+        rows = CommonBubbleteaParams.minimalConfig.meshRows,
+        columns = CommonBubbleteaParams.minimalConfig.meshColumns
       )
       val storeRemaperSetup = PermutationNetworkUtils.generateSwitchSettingsFromSrcMask(
         Seq(
@@ -217,8 +217,8 @@ class StreamingStageTest extends AnyFlatSpec with ChiselScalatestTester {
             RemaperMask(used = false, side = Side.East, index = 0, moduloCycle = 0)
           )
         ),
-        rows = CommonAcceleratorConfigs.minimalConfig.meshRows,
-        columns = CommonAcceleratorConfigs.minimalConfig.meshColumns
+        rows = CommonBubbleteaParams.minimalConfig.meshRows,
+        columns = CommonBubbleteaParams.minimalConfig.meshColumns
       )
 
       // fill first 256 bytes of memory with linear pattern
@@ -236,7 +236,7 @@ class StreamingStageTest extends AnyFlatSpec with ChiselScalatestTester {
       dut.io.memWriteEnable.poke(false.B)
       dut.clock.step(1)
 
-      for (i <- 0 until CommonAcceleratorConfigs.minimalConfig.maxSimultaneousLoadMacroStreams) {
+      for (i <- 0 until CommonBubbleteaParams.minimalConfig.maxSimultaneousLoadMacroStreams) {
         dut.io.staticConfiguration.streamingEngine.loadStreamsConfigured(i).poke(false.B)
       }
       
@@ -334,15 +334,15 @@ class StreamingStageTest extends AnyFlatSpec with ChiselScalatestTester {
       // dut.io.staticConfiguration.streamingEngine.storeStreamsVecLengthMinusOne(1).poke(7.U)
 
       // configure load remaper
-      for (i <- 0 until CommonAcceleratorConfigs.minimalConfig.numberOfLoadRemaperSwitchStages) {
-        for (j <- 0 until CommonAcceleratorConfigs.minimalConfig.numberOfLoadRemaperSwitchesPerStage) {
+      for (i <- 0 until CommonBubbleteaParams.minimalConfig.numberOfLoadRemaperSwitchStages) {
+        for (j <- 0 until CommonBubbleteaParams.minimalConfig.numberOfLoadRemaperSwitchesPerStage) {
           dut.io.staticConfiguration.loadRemaperSwitchesSetup(i)(j).poke(loadRemaperSetup(i)(j))
         }
       }
 
       // configure store remaper
-      for (i <- 0 until CommonAcceleratorConfigs.minimalConfig.numberOfStoreRemaperSwitchStages) {
-        for (j <- 0 until CommonAcceleratorConfigs.minimalConfig.numberOfStoreRemaperSwitchesPerStage) {
+      for (i <- 0 until CommonBubbleteaParams.minimalConfig.numberOfStoreRemaperSwitchStages) {
+        for (j <- 0 until CommonBubbleteaParams.minimalConfig.numberOfStoreRemaperSwitchesPerStage) {
           dut.io.staticConfiguration.storeRemaperSwitchesSetup(i)(j).poke(storeRemaperSetup(i)(j))
         }
       }
@@ -360,8 +360,8 @@ class StreamingStageTest extends AnyFlatSpec with ChiselScalatestTester {
   }
 
   it should "do something2, with vecLen 2" in {
-    test(new StreamingStageWithMemory(CommonAcceleratorConfigs.minimalConfig, 10, 2, 2)).withAnnotations(Seq(VerilatorBackendAnnotation, WriteVcdAnnotation)) { dut =>
-      val memoryDataWidth = CommonAcceleratorConfigs.minimalConfig.seLlbNumBytes * 8
+    test(new StreamingStageWithMemory(CommonBubbleteaParams.minimalConfig, 10, 2, 2)).withAnnotations(Seq(VerilatorBackendAnnotation, WriteVcdAnnotation)) { dut =>
+      val memoryDataWidth = CommonBubbleteaParams.minimalConfig.seLlbNumBytes * 8
       val loadRemaperSetup = PermutationNetworkUtils.generateSwitchSettingsFromDstMask(
         Seq(
           Seq(
@@ -385,8 +385,8 @@ class StreamingStageTest extends AnyFlatSpec with ChiselScalatestTester {
             RemaperMask(used = false, side = Side.East, index = 0, moduloCycle = 0)
           )
         ),
-        rows = CommonAcceleratorConfigs.minimalConfig.meshRows,
-        columns = CommonAcceleratorConfigs.minimalConfig.meshColumns
+        rows = CommonBubbleteaParams.minimalConfig.meshRows,
+        columns = CommonBubbleteaParams.minimalConfig.meshColumns
       )
       val storeRemaperSetup = PermutationNetworkUtils.generateSwitchSettingsFromSrcMask(
         Seq(
@@ -411,8 +411,8 @@ class StreamingStageTest extends AnyFlatSpec with ChiselScalatestTester {
             RemaperMask(used = false, side = Side.East, index = 0, moduloCycle = 0)
           )
         ),
-        rows = CommonAcceleratorConfigs.minimalConfig.meshRows,
-        columns = CommonAcceleratorConfigs.minimalConfig.meshColumns
+        rows = CommonBubbleteaParams.minimalConfig.meshRows,
+        columns = CommonBubbleteaParams.minimalConfig.meshColumns
       )
 
       // fill first 256 bytes of memory with linear pattern
@@ -430,7 +430,7 @@ class StreamingStageTest extends AnyFlatSpec with ChiselScalatestTester {
       dut.io.memWriteEnable.poke(false.B)
       dut.clock.step(1)
 
-      for (i <- 0 until CommonAcceleratorConfigs.minimalConfig.maxSimultaneousLoadMacroStreams) {
+      for (i <- 0 until CommonBubbleteaParams.minimalConfig.maxSimultaneousLoadMacroStreams) {
         dut.io.staticConfiguration.streamingEngine.loadStreamsConfigured(i).poke(false.B)
       }
       
@@ -528,15 +528,15 @@ class StreamingStageTest extends AnyFlatSpec with ChiselScalatestTester {
       // dut.io.staticConfiguration.streamingEngine.storeStreamsVecLengthMinusOne(1).poke(7.U)
 
       // configure load remaper
-      for (i <- 0 until CommonAcceleratorConfigs.minimalConfig.numberOfLoadRemaperSwitchStages) {
-        for (j <- 0 until CommonAcceleratorConfigs.minimalConfig.numberOfLoadRemaperSwitchesPerStage) {
+      for (i <- 0 until CommonBubbleteaParams.minimalConfig.numberOfLoadRemaperSwitchStages) {
+        for (j <- 0 until CommonBubbleteaParams.minimalConfig.numberOfLoadRemaperSwitchesPerStage) {
           dut.io.staticConfiguration.loadRemaperSwitchesSetup(i)(j).poke(loadRemaperSetup(i)(j))
         }
       }
 
       // configure store remaper
-      for (i <- 0 until CommonAcceleratorConfigs.minimalConfig.numberOfStoreRemaperSwitchStages) {
-        for (j <- 0 until CommonAcceleratorConfigs.minimalConfig.numberOfStoreRemaperSwitchesPerStage) {
+      for (i <- 0 until CommonBubbleteaParams.minimalConfig.numberOfStoreRemaperSwitchStages) {
+        for (j <- 0 until CommonBubbleteaParams.minimalConfig.numberOfStoreRemaperSwitchesPerStage) {
           dut.io.staticConfiguration.storeRemaperSwitchesSetup(i)(j).poke(storeRemaperSetup(i)(j))
         }
       }
@@ -555,7 +555,7 @@ class StreamingStageTest extends AnyFlatSpec with ChiselScalatestTester {
 
   it should "emit Verilog" in {
     ChiselStage.emitSystemVerilogFile(
-      new StreamingStage(CommonAcceleratorConfigs.minimalConfig),
+      new StreamingStage(CommonBubbleteaParams.minimalConfig),
       firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info")
     )
   }

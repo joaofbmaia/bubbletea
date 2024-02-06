@@ -5,42 +5,42 @@ import chisel3.util.log2Ceil
 import chisel3.util.Decoupled
 import freechips.rocketchip.amba.axi4.{AXI4Bundle, AXI4BundleParameters}
 
-class StreamingStageStaticConfigurationBundle[T <: Data](config: AcceleratorConfig[T]) extends Bundle {
-  val streamingEngine = new StreamingEngineStaticConfigurationBundle(config)
-  val initiationIntervalMinusOne = UInt(log2Ceil(config.maxInitiationInterval).W)
-  val loadRemaperSwitchesSetup = Vec(config.numberOfLoadRemaperSwitchStages, Vec(config.numberOfLoadRemaperSwitchesPerStage, Bool()))
-  val storeRemaperSwitchesSetup = Vec(config.numberOfStoreRemaperSwitchStages, Vec(config.numberOfStoreRemaperSwitchesPerStage, Bool()))
+class StreamingStageStaticConfigurationBundle[T <: Data](params: BubbleteaParams[T]) extends Bundle {
+  val streamingEngine = new StreamingEngineStaticConfigurationBundle(params)
+  val initiationIntervalMinusOne = UInt(log2Ceil(params.maxInitiationInterval).W)
+  val loadRemaperSwitchesSetup = Vec(params.numberOfLoadRemaperSwitchStages, Vec(params.numberOfLoadRemaperSwitchesPerStage, Bool()))
+  val storeRemaperSwitchesSetup = Vec(params.numberOfStoreRemaperSwitchStages, Vec(params.numberOfStoreRemaperSwitchesPerStage, Bool()))
 }
 
-class StreamingStageControlBundle[T <: Data](config: AcceleratorConfig[T]) extends Bundle {
+class StreamingStageControlBundle[T <: Data](params: BubbleteaParams[T]) extends Bundle {
   val reset = Output(Bool())
   val meshRun = Output(Bool())
   val meshFire = Input(Bool())
   val done = Input(Bool())
 }
 
-class StreamingStage[T <: Data](config: AcceleratorConfig[T]) extends Module {
+class StreamingStage[T <: Data](params: BubbleteaParams[T]) extends Module {
   assert(
-    config.maxSimultaneousLoadMacroStreams * config.macroStreamDepth == config.maxInitiationInterval * (2 * config.meshRows + 2 * config.meshColumns),
+    params.maxSimultaneousLoadMacroStreams * params.macroStreamDepth == params.maxInitiationInterval * (2 * params.meshRows + 2 * params.meshColumns),
     "Number of macro stream elements must equal number of micro stream elements"
   )
   val io = IO(new Bundle {
-    val memory = AXI4Bundle(new AXI4BundleParameters(config.seAddressWidth, config.seAxiDataWidth, 1))
+    val memory = AXI4Bundle(new AXI4BundleParameters(params.seAddressWidth, params.seAxiDataWidth, 1))
 
-    val meshDataOut = Output(new MeshData(config))
-    val meshDataIn = Input(new MeshData(config))
+    val meshDataOut = Output(new MeshData(params))
+    val meshDataIn = Input(new MeshData(params))
 
-    val control = Flipped(new StreamingStageControlBundle(config))
+    val control = Flipped(new StreamingStageControlBundle(params))
   
-    val staticConfiguration = Input(new StreamingStageStaticConfigurationBundle(config))
+    val staticConfiguration = Input(new StreamingStageStaticConfigurationBundle(params))
 
-    val seConfigurationChannel = Flipped(Decoupled(new StreamingEngineConfigurationChannelBundle(config)))
+    val seConfigurationChannel = Flipped(Decoupled(new StreamingEngineConfigurationChannelBundle(params)))
   })
 
   val meshFire = Wire(Bool())
 
   // Modulo cycle counter
-  val currentModuloCycle = withReset(reset.asBool || io.control.reset)(RegInit(0.U(log2Ceil(config.maxInitiationInterval).W)))
+  val currentModuloCycle = withReset(reset.asBool || io.control.reset)(RegInit(0.U(log2Ceil(params.maxInitiationInterval).W)))
 
   val lastCycle = currentModuloCycle === io.staticConfiguration.initiationIntervalMinusOne
 
@@ -51,15 +51,15 @@ class StreamingStage[T <: Data](config: AcceleratorConfig[T]) extends Module {
   }
 
   // Register for buffering the micro streams from the multiple cycles
-  val microStreamsReg = Reg(Vec(config.maxInitiationInterval, new MeshData(config)))
+  val microStreamsReg = Reg(Vec(params.maxInitiationInterval, new MeshData(params)))
 
   when(meshFire) {
     microStreamsReg(currentModuloCycle) := io.meshDataIn
   }
 
   // The microStreams wire contains the micro streams from previous cycles and the current cycle
-  val microStreams = Wire(Vec(config.maxInitiationInterval, new MeshData(config)))
-  for (i <- 0 until config.maxInitiationInterval) {
+  val microStreams = Wire(Vec(params.maxInitiationInterval, new MeshData(params)))
+  for (i <- 0 until params.maxInitiationInterval) {
     when(currentModuloCycle === i.U) {
       microStreams(i) := io.meshDataIn
     } .otherwise {
@@ -68,13 +68,13 @@ class StreamingStage[T <: Data](config: AcceleratorConfig[T]) extends Module {
   }
 
   // Instantiate the load stream remaper
-  val loadRemaper = Module(new LoadStreamRemaper(config))
+  val loadRemaper = Module(new LoadStreamRemaper(params))
 
   // Instantiate the store stream remaper
-  val storeRemaper = Module(new StoreStreamRemaper(config))
+  val storeRemaper = Module(new StoreStreamRemaper(params))
 
   // Instantiate the streaming engine
-  val streamingEngine = Module(new StreamingEngine(config))
+  val streamingEngine = Module(new StreamingEngine(params))
 
   // Configuration and reset
   streamingEngine.io.control.reset := io.control.reset

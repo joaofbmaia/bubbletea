@@ -3,9 +3,9 @@ package bubbletea
 import chisel3._
 import chisel3.util._
 
-class ConfigurationBundle[T <: Data](config: AcceleratorConfig[T]) extends Bundle {
-  val static = new AcceleratorStaticConfigurationBundle(config)
-  val streamingEngineInstructions = Vec(config.maxConfigurationInstructions, new StreamingEngineCompressedConfigurationChannelBundle(config))
+class ConfigurationBundle[T <: Data](params: BubbleteaParams[T]) extends Bundle {
+  val static = new AcceleratorStaticConfigurationBundle(params)
+  val streamingEngineInstructions = Vec(params.maxConfigurationInstructions, new StreamingEngineCompressedConfigurationChannelBundle(params))
 }
 
 class ControlBundle extends Bundle {
@@ -15,30 +15,30 @@ class ControlBundle extends Bundle {
   val configurationDone = Input(Bool())
 }
 
-class AcceleratorStaticConfigurationBundle[T <: Data](config: AcceleratorConfig[T]) extends Bundle {
-  val streamingStage = new StreamingStageStaticConfigurationBundle(config)
-  val mesh = Vec(config.meshRows, Vec(config.meshColumns, new ProcessingElementConfigBundle(config)))
-  val delayer = new DelayerConfigBundle(config)
+class AcceleratorStaticConfigurationBundle[T <: Data](params: BubbleteaParams[T]) extends Bundle {
+  val streamingStage = new StreamingStageStaticConfigurationBundle(params)
+  val mesh = Vec(params.meshRows, Vec(params.meshColumns, new ProcessingElementConfigBundle(params)))
+  val delayer = new DelayerConfigBundle(params)
 }
 
-class AcceleratorControlBundle[T <: Data](config: AcceleratorConfig[T]) extends Bundle {
+class AcceleratorControlBundle[T <: Data](params: BubbleteaParams[T]) extends Bundle {
   val reset = Output(Bool())
   val run = Output(Bool())
   val done = Input(Bool())
 }
 
-class Controller[T <: Data](config: AcceleratorConfig[T]) extends Module {
+class Controller[T <: Data](params: BubbleteaParams[T]) extends Module {
   val io = IO(new Bundle {
-    val configuration = Input(new ConfigurationBundle(config))
+    val configuration = Input(new ConfigurationBundle(params))
     val globalControl = Flipped(new ControlBundle)
 
-    val acceleratorControl = new AcceleratorControlBundle(config)
-    val staticConfiguration = new AcceleratorStaticConfigurationBundle(config)
-    val seConfigurationChannel = Decoupled(new StreamingEngineConfigurationChannelBundle(config))
+    val acceleratorControl = new AcceleratorControlBundle(params)
+    val staticConfiguration = new AcceleratorStaticConfigurationBundle(params)
+    val seConfigurationChannel = Decoupled(new StreamingEngineConfigurationChannelBundle(params))
   })
 
   // This is the hot static configuration
-  val currentStaticConfiguration = Reg(new AcceleratorStaticConfigurationBundle(config))
+  val currentStaticConfiguration = Reg(new AcceleratorStaticConfigurationBundle(params))
 
   object State extends ChiselEnum {
     val done, configuring, computing = Value
@@ -46,7 +46,7 @@ class Controller[T <: Data](config: AcceleratorConfig[T]) extends Module {
 
   val state = RegInit(State.done)
 
-  val seConfigurator = Module(new SeConfigurator(config))
+  val seConfigurator = Module(new SeConfigurator(params))
 
   val controlReset = Wire(Bool())
   io.acceleratorControl.reset := controlReset

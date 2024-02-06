@@ -8,26 +8,26 @@ object StoreStreamRemaper {
   val latency = 1
 }
 
-class StoreStreamRemaper[T <: Data](config: AcceleratorConfig[T]) extends Module {
+class StoreStreamRemaper[T <: Data](params: BubbleteaParams[T]) extends Module {
   import StoreStreamRemaper._
   val io = IO(new Bundle {
-    val microStreamsIn = Flipped(Decoupled(Vec(config.maxInitiationInterval, new MeshData(config))))
-    val macroStreamsOut = Decoupled(Vec(config.maxSimultaneousStoreMacroStreams, Vec(config.macroStreamDepth, config.dataType)))
+    val microStreamsIn = Flipped(Decoupled(Vec(params.maxInitiationInterval, new MeshData(params))))
+    val macroStreamsOut = Decoupled(Vec(params.maxSimultaneousStoreMacroStreams, Vec(params.macroStreamDepth, params.dataType)))
     assert(microStreamsIn.bits.getWidth >= macroStreamsOut.bits.getWidth, "Number of macro stream elements must not be larger than number of micro stream elements")
-    val remaperSwitchesSetup = Input(Vec(config.numberOfStoreRemaperSwitchStages, Vec(config.numberOfStoreRemaperSwitchesPerStage, Bool())))
+    val remaperSwitchesSetup = Input(Vec(params.numberOfStoreRemaperSwitchStages, Vec(params.numberOfStoreRemaperSwitchesPerStage, Bool())))
   })
 
   val microStreams = io.microStreamsIn.bits
-  val macroStreams = Wire(Vec(config.maxSimultaneousStoreMacroStreams, Vec(config.macroStreamDepth, config.dataType)))
+  val macroStreams = Wire(Vec(params.maxSimultaneousStoreMacroStreams, Vec(params.macroStreamDepth, params.dataType)))
 
   val upstreamValid = Wire(Bool())
   val upstreamReady = Wire(Bool())
   val downstreamValid = Wire(Bool())
   val downstreamReady = Wire(Bool())
 
-  val permutationNetwork = Module(new PermutationNetwork(config.dataType, config.numberOfStoreRemaperElements))
+  val permutationNetwork = Module(new PermutationNetwork(params.dataType, params.numberOfStoreRemaperElements))
 
-  permutationNetwork.io.in := microStreams.asTypeOf(Vec(config.numberOfStoreRemaperElements, config.dataType))
+  permutationNetwork.io.in := microStreams.asTypeOf(Vec(params.numberOfStoreRemaperElements, params.dataType))
   permutationNetwork.io.select := io.remaperSwitchesSetup
   macroStreams := permutationNetwork.io.out.asTypeOf(macroStreams) // this cast will truncate the output if the number of microstream elements is larger than the number of macrostream elements
 

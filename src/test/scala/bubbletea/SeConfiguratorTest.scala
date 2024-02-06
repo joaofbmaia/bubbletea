@@ -7,14 +7,14 @@ import circt.stage.ChiselStage
 
 class SeConfiguratorTest extends AnyFlatSpec with ChiselScalatestTester {
   "SeConfigurator" should "do something" in {
-    test(new SeConfigurator(CommonAcceleratorConfigs.minimalConfig)).withAnnotations(Seq()) { dut =>
+    test(new SeConfigurator(CommonBubbleteaParams.minimalConfig)).withAnnotations(Seq()) { dut =>
     // test body here
     }
   }
 
   it should "emit Verilog" in {
     ChiselStage.emitSystemVerilogFile(
-      new SeConfigurator(CommonAcceleratorConfigs.minimalConfig),
+      new SeConfigurator(CommonBubbleteaParams.minimalConfig),
       firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info")
     )
   }

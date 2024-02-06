@@ -3,20 +3,20 @@ package bubbletea
 import chisel3._
 
 
-class MeshWithDelays[T <: Data: Arithmetic](config: AcceleratorConfig[T]) extends Module {
+class MeshWithDelays[T <: Data: Arithmetic](params: BubbleteaParams[T]) extends Module {
   val io = IO(new Bundle {
     val fire = Input(Bool())
 
-    val in = Input(new MeshData(config))
-    val out = Output(new MeshData(config))
+    val in = Input(new MeshData(params))
+    val out = Output(new MeshData(params))
 
-    val meshConfiguration = Input(Vec(config.meshRows, Vec(config.meshColumns, new ProcessingElementConfigBundle(config))))
-    val delayerConfiguration = Input(new DelayerConfigBundle(config))
+    val meshConfiguration = Input(Vec(params.meshRows, Vec(params.meshColumns, new ProcessingElementConfigBundle(params))))
+    val delayerConfiguration = Input(new DelayerConfigBundle(params))
   })
 
-  val mesh = Module(new Mesh(config))
+  val mesh = Module(new Mesh(params))
 
-  val delayer = Module(new Delayer(config))
+  val delayer = Module(new Delayer(params))
 
   mesh.io.fire := io.fire
   mesh.io.configuration := io.meshConfiguration

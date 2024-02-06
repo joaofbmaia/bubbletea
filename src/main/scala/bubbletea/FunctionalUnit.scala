@@ -8,14 +8,14 @@ object FUSel extends ChiselEnum {
   val nop, add, sub, mul, shl, lshr, ashr, and, or, xor, res0, res1, res2, res3, res4, res5 = Value
 }
 
-class FunctionalUnit[T <: Data: Arithmetic](config: AcceleratorConfig[T]) (implicit ev: Arithmetic[T]) extends Module {
+class FunctionalUnit[T <: Data: Arithmetic](params: BubbleteaParams[T]) (implicit ev: Arithmetic[T]) extends Module {
   import ev._
 
   val io = IO(new Bundle {
-    val a = Input(config.dataType)
-    val b = Input(config.dataType)
+    val a = Input(params.dataType)
+    val b = Input(params.dataType)
     val op = Input(FUSel())
-    val result = Output(config.dataType)
+    val result = Output(params.dataType)
   })
 
   io.result := DontCare

@@ -5,19 +5,19 @@ import chisel3.util.log2Ceil
 import chisel3.util.Decoupled
 import freechips.rocketchip.amba.axi4.{AXI4Bundle, AXI4BundleParameters}
 
-class AcceleratorTop[T <: Data: Arithmetic](val config: AcceleratorConfig[T]) extends Module {
+class AcceleratorTop[T <: Data: Arithmetic](val params: BubbleteaParams[T]) extends Module {
   val io = IO(new Bundle {
-    val configuration = Input(new ConfigurationBundle(config))
+    val configuration = Input(new ConfigurationBundle(params))
     val globalControl = Flipped(new ControlBundle)
 
-    val memory = AXI4Bundle(new AXI4BundleParameters(config.seAddressWidth, config.seAxiDataWidth, 1))
+    val memory = AXI4Bundle(new AXI4BundleParameters(params.seAddressWidth, params.seAxiDataWidth, 1))
   })
 
-  val controller = Module(new Controller(config))
+  val controller = Module(new Controller(params))
 
-  val meshWithDelays = Module(new MeshWithDelays(config))
+  val meshWithDelays = Module(new MeshWithDelays(params))
 
-  val streamingStage = Module(new StreamingStage(config))
+  val streamingStage = Module(new StreamingStage(params))
 
   io.memory :<>= streamingStage.io.memory
 

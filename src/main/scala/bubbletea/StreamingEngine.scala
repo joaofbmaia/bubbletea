@@ -8,33 +8,33 @@ import chisel3.util.RRArbiter
 import chisel3.util.PriorityEncoder
 import chisel3.util.Counter
 
-class StreamingEngineStaticConfigurationBundle[T <: Data](config: AcceleratorConfig[T]) extends Bundle {
-  val loadStreamsConfigured = Vec(config.maxSimultaneousLoadMacroStreams, Bool())
-  val storeStreamsConfigured = Vec(config.maxSimultaneousStoreMacroStreams, Bool())
-  val storeStreamsVecLengthMinusOne = Vec(config.maxSimultaneousStoreMacroStreams, UInt(log2Ceil(config.macroStreamDepth).W))
+class StreamingEngineStaticConfigurationBundle[T <: Data](params: BubbleteaParams[T]) extends Bundle {
+  val loadStreamsConfigured = Vec(params.maxSimultaneousLoadMacroStreams, Bool())
+  val storeStreamsConfigured = Vec(params.maxSimultaneousStoreMacroStreams, Bool())
+  val storeStreamsVecLengthMinusOne = Vec(params.maxSimultaneousStoreMacroStreams, UInt(log2Ceil(params.macroStreamDepth).W))
 }
 
-class StreamingEngineControlBundle[T <: Data](config: AcceleratorConfig[T]) extends Bundle {
+class StreamingEngineControlBundle[T <: Data](params: BubbleteaParams[T]) extends Bundle {
   val reset = Output(Bool())
   val loadStreamsDone = Input(Bool())
   val storeStreamsDone = Input(Bool())
 }
 
-class StreamingEngineConfigurationChannelBundle[T <: Data](config: AcceleratorConfig[T]) extends Bundle {
+class StreamingEngineConfigurationChannelBundle[T <: Data](params: BubbleteaParams[T]) extends Bundle {
   val start = Bool()
   val end = Bool()
   val loadStore = Bool()
   val elementWidth = UInt(2.W) //should be enum
-  val stream = UInt(config.seStreamIdWidth.W)
+  val stream = UInt(params.seStreamIdWidth.W)
   val mod = Bool()
   val vectorize = Bool()
   val modTarget = UInt(2.W) //should be enum
   val modBehaviour = Bool()
-  val modDisplacement = UInt(config.seStrideWidth.W)
-  val modSize = UInt(config.seSizeWidth.W)
-  val dimOffset = UInt(config.seOffsetWidth.W)
-  val dimStride = UInt(config.seStrideWidth.W)
-  val dimSize = UInt(config.seSizeWidth.W)
+  val modDisplacement = UInt(params.seStrideWidth.W)
+  val modSize = UInt(params.seSizeWidth.W)
+  val dimOffset = UInt(params.seOffsetWidth.W)
+  val dimStride = UInt(params.seStrideWidth.W)
+  val dimSize = UInt(params.seSizeWidth.W)
 }
 
 class StreamingEngineHpcBundle extends Bundle {
@@ -50,39 +50,39 @@ class StreamingEngineHpcBundle extends Bundle {
   val opsStore = UInt(16.W)
 }
 
-class StreamingEngine[T <: Data](config: AcceleratorConfig[T]) extends Module {
+class StreamingEngine[T <: Data](params: BubbleteaParams[T]) extends Module {
   val io = IO(new Bundle {
-    val control = Flipped(new StreamingEngineControlBundle(config))
-    val staticConfiguration = Input(new StreamingEngineStaticConfigurationBundle(config))
-    val configurationChannel = Flipped(Decoupled(new StreamingEngineConfigurationChannelBundle(config)))
-    val loadStreams = Decoupled((Vec(config.maxSimultaneousLoadMacroStreams, Vec(config.macroStreamDepth, config.dataType))))
-    val storeStreams = Flipped(Decoupled((Vec(config.maxSimultaneousStoreMacroStreams, Vec(config.macroStreamDepth, config.dataType)))))
-    val memory = AXI4Bundle(new AXI4BundleParameters(config.seAddressWidth, config.seAxiDataWidth, 1))
+    val control = Flipped(new StreamingEngineControlBundle(params))
+    val staticConfiguration = Input(new StreamingEngineStaticConfigurationBundle(params))
+    val configurationChannel = Flipped(Decoupled(new StreamingEngineConfigurationChannelBundle(params)))
+    val loadStreams = Decoupled((Vec(params.maxSimultaneousLoadMacroStreams, Vec(params.macroStreamDepth, params.dataType))))
+    val storeStreams = Flipped(Decoupled((Vec(params.maxSimultaneousStoreMacroStreams, Vec(params.macroStreamDepth, params.dataType)))))
+    val memory = AXI4Bundle(new AXI4BundleParameters(params.seAddressWidth, params.seAxiDataWidth, 1))
     val hpc = Output(new StreamingEngineHpcBundle)
   })
 
   // Instantiate the streaming engine
   val streamingEngineImpl = Module(
     new streamingengine.StreamingEngine(
-      STREAM_NUM_DIMS = config.seMaxStreamDims,
-      STREAM_NUM_MODS = config.seMaxStreamMods,
-      STREAM_OFFSET_WIDTH = config.seOffsetWidth,
-      STREAM_STRIDE_WIDTH = config.seStrideWidth,
-      STREAM_SIZE_WIDTH = config.seSizeWidth,
-      STREAM_ID_WIDTH = config.seStreamIdWidth,
-      LRQ_NUM_TABLES = config.seLrqNumTables,
-      LRQ_NUM_REQUESTS = config.seLrqNumRequests,
-      LLB_NUM_TABLES = config.seLlbNumTables,
-      LLB_NUM_BYTES = config.seLlbNumBytes,
-      LMMU_NUM_VECS = config.seLmmuNumVecs,
-      SMMU_NUM_ADDRESSES = config.seSmmuNumAddresses,
-      ADDRESS_WIDTH = config.seAddressWidth,
-      VEC_WIDTH = config.macroStreamDepth * config.dataType.getWidth,
-      NUM_SRC_OPERANDS = config.maxSimultaneousLoadMacroStreams,
-      AXI_R_DATA_WIDTH = config.seAxiDataWidth,
-      AXI_W_DATA_WIDTH = config.seAxiDataWidth,
-      MAX_NUM_LOAD_STREAMS = config.seMaxNumLoadStreams,
-      MAX_NUM_STORE_STREAMS = config.seMaxNumStoreStreams
+      STREAM_NUM_DIMS = params.seMaxStreamDims,
+      STREAM_NUM_MODS = params.seMaxStreamMods,
+      STREAM_OFFSET_WIDTH = params.seOffsetWidth,
+      STREAM_STRIDE_WIDTH = params.seStrideWidth,
+      STREAM_SIZE_WIDTH = params.seSizeWidth,
+      STREAM_ID_WIDTH = params.seStreamIdWidth,
+      LRQ_NUM_TABLES = params.seLrqNumTables,
+      LRQ_NUM_REQUESTS = params.seLrqNumRequests,
+      LLB_NUM_TABLES = params.seLlbNumTables,
+      LLB_NUM_BYTES = params.seLlbNumBytes,
+      LMMU_NUM_VECS = params.seLmmuNumVecs,
+      SMMU_NUM_ADDRESSES = params.seSmmuNumAddresses,
+      ADDRESS_WIDTH = params.seAddressWidth,
+      VEC_WIDTH = params.macroStreamDepth * params.dataType.getWidth,
+      NUM_SRC_OPERANDS = params.maxSimultaneousLoadMacroStreams,
+      AXI_R_DATA_WIDTH = params.seAxiDataWidth,
+      AXI_W_DATA_WIDTH = params.seAxiDataWidth,
+      MAX_NUM_LOAD_STREAMS = params.seMaxNumLoadStreams,
+      MAX_NUM_STORE_STREAMS = params.seMaxNumStoreStreams
     )
   )
 
@@ -121,9 +121,9 @@ class StreamingEngine[T <: Data](config: AcceleratorConfig[T]) extends Module {
   val loadReady = Wire(Bool())
   loadReady := io.loadStreams.ready && loadValid
 
-  for (i <- 0 until config.maxSimultaneousLoadMacroStreams) {
+  for (i <- 0 until params.maxSimultaneousLoadMacroStreams) {
     streamingEngineImpl.io.rs_in_ready(i) := loadReady
-    io.loadStreams.bits(i) := streamingEngineImpl.io.rs_out_vecdata(i).asTypeOf(Vec(config.macroStreamDepth, config.dataType))
+    io.loadStreams.bits(i) := streamingEngineImpl.io.rs_out_vecdata(i).asTypeOf(Vec(params.macroStreamDepth, params.dataType))
     streamingEngineImpl.io.rs_in_streamid(i) := i.U
     //streamingEngineImpl.io.rs_in_predicate(i) is not used
   }
@@ -132,9 +132,9 @@ class StreamingEngine[T <: Data](config: AcceleratorConfig[T]) extends Module {
 
 
   // Handle the all done signal for the load streams
-  val loadStreamsDoneReg = withReset(reset.asBool || io.control.reset)(RegInit(VecInit(Seq.fill(config.maxSimultaneousLoadMacroStreams)(false.B))))
+  val loadStreamsDoneReg = withReset(reset.asBool || io.control.reset)(RegInit(VecInit(Seq.fill(params.maxSimultaneousLoadMacroStreams)(false.B))))
 
-  for (i <- 0 until config.maxSimultaneousLoadMacroStreams) {
+  for (i <- 0 until params.maxSimultaneousLoadMacroStreams) {
     when (streamingEngineImpl.io.rs_out_done(i)) {
       loadStreamsDoneReg(i) := true.B
     }
@@ -146,19 +146,19 @@ class StreamingEngine[T <: Data](config: AcceleratorConfig[T]) extends Module {
 
   // Store stream channel
   // Since current SE implementation only supports one store stream, we need to use an round robin arbiter to multiplex the store streams
-  val storeStreamIdBase = config.maxSimultaneousLoadMacroStreams
+  val storeStreamIdBase = params.maxSimultaneousLoadMacroStreams
 
   // This is the bundle that will be used by the arbiter
   class storeStreamBundle extends Bundle {
-    val streamId = UInt(config.seStreamIdWidth.W)
-    val vecData = Vec(config.macroStreamDepth, config.dataType)
-    val vecLengthMinusOne = UInt(log2Ceil(config.macroStreamDepth).W)
+    val streamId = UInt(params.seStreamIdWidth.W)
+    val vecData = Vec(params.macroStreamDepth, params.dataType)
+    val vecLengthMinusOne = UInt(log2Ceil(params.macroStreamDepth).W)
   }
 
   // This is the wire that represents the multiple store streams
-  val storeStreamsWithMetadata = Wire(Vec(config.maxSimultaneousStoreMacroStreams, Decoupled(new storeStreamBundle)))
+  val storeStreamsWithMetadata = Wire(Vec(params.maxSimultaneousStoreMacroStreams, Decoupled(new storeStreamBundle)))
 
-  for (i <- 0 until config.maxSimultaneousStoreMacroStreams) {
+  for (i <- 0 until params.maxSimultaneousStoreMacroStreams) {
     storeStreamsWithMetadata(i).valid := io.storeStreams.valid && io.staticConfiguration.storeStreamsConfigured(i)
     storeStreamsWithMetadata(i).bits.streamId := storeStreamIdBase.U + i.U
     storeStreamsWithMetadata(i).bits.vecData := io.storeStreams.bits(i)
@@ -166,8 +166,8 @@ class StreamingEngine[T <: Data](config: AcceleratorConfig[T]) extends Module {
   }
 
   // Register to keep track of which store stream has already been read by the arbiter
-  val storeStreamFired = withReset(reset.asBool || io.control.reset)(RegInit(VecInit(Seq.fill(config.maxSimultaneousStoreMacroStreams)(false.B))))
-  for (i <- 0 until config.maxSimultaneousStoreMacroStreams) {
+  val storeStreamFired = withReset(reset.asBool || io.control.reset)(RegInit(VecInit(Seq.fill(params.maxSimultaneousStoreMacroStreams)(false.B))))
+  for (i <- 0 until params.maxSimultaneousStoreMacroStreams) {
     when(storeStreamsWithMetadata(i).fire) {
       storeStreamFired(i) := true.B
     }
@@ -186,7 +186,7 @@ class StreamingEngine[T <: Data](config: AcceleratorConfig[T]) extends Module {
   }
 
 
-  val storeStreamArbiter = Module(new RRArbiter(new storeStreamBundle, config.maxSimultaneousStoreMacroStreams))
+  val storeStreamArbiter = Module(new RRArbiter(new storeStreamBundle, params.maxSimultaneousStoreMacroStreams))
   storeStreamArbiter.io.in :<>= storeStreamsWithMetadata
 
   streamingEngineImpl.io.rd_in_valid := storeStreamArbiter.io.out.valid
@@ -194,14 +194,14 @@ class StreamingEngine[T <: Data](config: AcceleratorConfig[T]) extends Module {
   streamingEngineImpl.io.rd_in_vecdata := storeStreamArbiter.io.out.bits.vecData.asUInt
   storeStreamArbiter.io.out.ready := streamingEngineImpl.io.rd_out_ready
 
-  val storePredicate = Wire(UInt((config.macroStreamDepth * config.dataType.getWidth / 8).W))
+  val storePredicate = Wire(UInt((params.macroStreamDepth * params.dataType.getWidth / 8).W))
   // This just makes the storePredicate with the LSBs set to 1 until the vector legth
   // Example: if vector length is 4, storePredicate will be 0b00000000000000000000000000001111
-  storePredicate := (-1.S(storePredicate.getWidth.W).asUInt >> (((config.macroStreamDepth.U - 1.U) - storeStreamArbiter.io.out.bits.vecLengthMinusOne) * (config.dataType.getWidth / 8).U)).asUInt
+  storePredicate := (-1.S(storePredicate.getWidth.W).asUInt >> (((params.macroStreamDepth.U - 1.U) - storeStreamArbiter.io.out.bits.vecLengthMinusOne) * (params.dataType.getWidth / 8).U)).asUInt
   streamingEngineImpl.io.rd_in_predicate := storePredicate
 
   // Handle the all done signal for the store streams
-  val storeStreamsDoneCounter = withReset(reset.asBool || io.control.reset)(Counter(config.maxSimultaneousStoreMacroStreams + 1))
+  val storeStreamsDoneCounter = withReset(reset.asBool || io.control.reset)(Counter(params.maxSimultaneousStoreMacroStreams + 1))
   when (streamingEngineImpl.io.rd_out_done) {
     storeStreamsDoneCounter.inc()
   }
