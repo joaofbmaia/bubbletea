@@ -19,13 +19,13 @@ class StreamingStageControlBundle[T <: Data](params: BubbleteaParams[T]) extends
   val done = Input(Bool())
 }
 
-class StreamingStage[T <: Data](params: BubbleteaParams[T]) extends Module {
+class StreamingStage[T <: Data](params: BubbleteaParams[T], socParams: SocParams) extends Module {
   assert(
     params.maxSimultaneousLoadMacroStreams * params.macroStreamDepth == params.maxInitiationInterval * (2 * params.meshRows + 2 * params.meshColumns),
     "Number of macro stream elements must equal number of micro stream elements"
   )
   val io = IO(new Bundle {
-    val memory = AXI4Bundle(new AXI4BundleParameters(params.seAddressWidth, params.seAxiDataWidth, 1))
+    val memory = AXI4Bundle(new AXI4BundleParameters(socParams.frontBusAddressBits, socParams.frontBusDataBits, 1))
 
     val meshDataOut = Output(new MeshData(params))
     val meshDataIn = Input(new MeshData(params))
@@ -74,7 +74,7 @@ class StreamingStage[T <: Data](params: BubbleteaParams[T]) extends Module {
   val storeRemaper = Module(new StoreStreamRemaper(params))
 
   // Instantiate the streaming engine
-  val streamingEngine = Module(new StreamingEngine(params))
+  val streamingEngine = Module(new StreamingEngine(params, socParams))
 
   // Configuration and reset
   streamingEngine.io.control.reset := io.control.reset

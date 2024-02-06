@@ -50,14 +50,14 @@ class StreamingEngineHpcBundle extends Bundle {
   val opsStore = UInt(16.W)
 }
 
-class StreamingEngine[T <: Data](params: BubbleteaParams[T]) extends Module {
+class StreamingEngine[T <: Data](params: BubbleteaParams[T], socParams: SocParams) extends Module {
   val io = IO(new Bundle {
     val control = Flipped(new StreamingEngineControlBundle(params))
     val staticConfiguration = Input(new StreamingEngineStaticConfigurationBundle(params))
     val configurationChannel = Flipped(Decoupled(new StreamingEngineConfigurationChannelBundle(params)))
     val loadStreams = Decoupled((Vec(params.maxSimultaneousLoadMacroStreams, Vec(params.macroStreamDepth, params.dataType))))
     val storeStreams = Flipped(Decoupled((Vec(params.maxSimultaneousStoreMacroStreams, Vec(params.macroStreamDepth, params.dataType)))))
-    val memory = AXI4Bundle(new AXI4BundleParameters(params.seAddressWidth, params.seAxiDataWidth, 1))
+    val memory = AXI4Bundle(new AXI4BundleParameters(socParams.frontBusAddressBits, socParams.frontBusDataBits, 1))
     val hpc = Output(new StreamingEngineHpcBundle)
   })
 
@@ -73,14 +73,14 @@ class StreamingEngine[T <: Data](params: BubbleteaParams[T]) extends Module {
       LRQ_NUM_TABLES = params.seLrqNumTables,
       LRQ_NUM_REQUESTS = params.seLrqNumRequests,
       LLB_NUM_TABLES = params.seLlbNumTables,
-      LLB_NUM_BYTES = params.seLlbNumBytes,
+      LLB_NUM_BYTES = socParams.cacheLineBytes,
       LMMU_NUM_VECS = params.seLmmuNumVecs,
       SMMU_NUM_ADDRESSES = params.seSmmuNumAddresses,
-      ADDRESS_WIDTH = params.seAddressWidth,
+      ADDRESS_WIDTH = socParams.frontBusAddressBits,
       VEC_WIDTH = params.macroStreamDepth * params.dataType.getWidth,
       NUM_SRC_OPERANDS = params.maxSimultaneousLoadMacroStreams,
-      AXI_R_DATA_WIDTH = params.seAxiDataWidth,
-      AXI_W_DATA_WIDTH = params.seAxiDataWidth,
+      AXI_R_DATA_WIDTH = socParams.frontBusDataBits,
+      AXI_W_DATA_WIDTH = socParams.frontBusDataBits,
       MAX_NUM_LOAD_STREAMS = params.seMaxNumLoadStreams,
       MAX_NUM_STORE_STREAMS = params.seMaxNumStoreStreams
     )

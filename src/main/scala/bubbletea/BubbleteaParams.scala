@@ -24,13 +24,13 @@ trait BubbleteaParams[T <: Data] {
   val seLrqNumTables: Int
   val seLrqNumRequests: Int
   val seLlbNumTables: Int
-  val seLlbNumBytes: Int // =cacheBlockBytes
+  //val seLlbNumBytes: Int // =cacheBlockBytes
   val seLmmuNumVecs: Int
   val seSmmuNumAddresses: Int
-  val seAddressWidth: Int // =coreMaxAddrBits
+  //val seAddressWidth: Int // =coreMaxAddrBits
   //val seVecWidth: Int, // =macroStreamDepth
   //val seNumSrcOperands: Int, // =maxSimultaneousLoadMacroStreams
-  val seAxiDataWidth: Int // =beatBytes * 8
+  //val seAxiDataWidth: Int // =beatBytes * 8
   val seMaxNumLoadStreams: Int
   val seMaxNumStoreStreams: Int
 
@@ -79,13 +79,8 @@ case class UIntBubbleteaParams(
   seLrqNumTables: Int,
   seLrqNumRequests: Int,
   seLlbNumTables: Int,
-  seLlbNumBytes: Int, // =cacheBlockBytes
   seLmmuNumVecs: Int,
   seSmmuNumAddresses: Int,
-  seAddressWidth: Int, // =coreMaxAddrBits
-  //seVecWidth: Int, // =macroStreamDepth
-  //seNumSrcOperands: Int, // =maxSimultaneousLoadMacroStreams
-  seAxiDataWidth: Int, // =beatBytes * 8
   seMaxNumLoadStreams: Int,
   seMaxNumStoreStreams: Int,
 
@@ -117,13 +112,8 @@ case class SIntBubbleteaParams(
   seLrqNumTables: Int,
   seLrqNumRequests: Int,
   seLlbNumTables: Int,
-  seLlbNumBytes: Int, // =cacheBlockBytes
   seLmmuNumVecs: Int,
   seSmmuNumAddresses: Int,
-  seAddressWidth: Int, // =coreMaxAddrBits
-  //seVecWidth: Int, // =macroStreamDepth
-  //seNumSrcOperands: Int, // =maxSimultaneousLoadMacroStreams
-  seAxiDataWidth: Int, // =beatBytes * 8
   seMaxNumLoadStreams: Int,
   seMaxNumStoreStreams: Int,
 
@@ -155,13 +145,8 @@ case class FloatBubbleteaParams(
   seLrqNumTables: Int,
   seLrqNumRequests: Int,
   seLlbNumTables: Int,
-  seLlbNumBytes: Int, // =cacheBlockBytes
   seLmmuNumVecs: Int,
   seSmmuNumAddresses: Int,
-  seAddressWidth: Int, // =coreMaxAddrBits
-  //seVecWidth: Int, // =macroStreamDepth
-  //seNumSrcOperands: Int, // =maxSimultaneousLoadMacroStreams
-  seAxiDataWidth: Int, // =beatBytes * 8
   seMaxNumLoadStreams: Int,
   seMaxNumStoreStreams: Int,
 
@@ -191,11 +176,8 @@ object CommonBubbleteaParams {
     seLrqNumTables = 16,
     seLrqNumRequests = 8,
     seLlbNumTables = 4,
-    seLlbNumBytes = 64,
     seLmmuNumVecs = 4,
     seSmmuNumAddresses = 64,
-    seAddressWidth = 32,
-    seAxiDataWidth = 64,
     seMaxNumLoadStreams = 4,
     seMaxNumStoreStreams = 4,
     rfSize = 2,
@@ -223,11 +205,8 @@ object CommonBubbleteaParams {
     seLrqNumTables = 16,
     seLrqNumRequests = 2,
     seLlbNumTables = 4,
-    seLlbNumBytes = 8,
     seLmmuNumVecs = 4,
     seSmmuNumAddresses = 32,
-    seAddressWidth = 32,
-    seAxiDataWidth = 32,
     seMaxNumLoadStreams = 4,
     seMaxNumStoreStreams = 4,
     rfSize = 2,

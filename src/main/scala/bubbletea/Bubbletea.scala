@@ -7,6 +7,7 @@ import freechips.rocketchip.tilelink._
 import freechips.rocketchip.subsystem._
 import freechips.rocketchip.regmapper._
 import freechips.rocketchip.amba.axi4._
+import freechips.rocketchip.tile._
 
 class Bubbletea[T <: Data: Arithmetic](params: BubbleteaParams[T])(implicit p: Parameters) extends LazyModule {
     val device = new SimpleDevice("bubbletea", Seq("inesc,bubbletea0"))
@@ -20,14 +21,18 @@ class Bubbletea[T <: Data: Arithmetic](params: BubbleteaParams[T])(implicit p: P
     val seAxiNode = AXI4MasterNode(Seq(AXI4MasterPortParameters(
         masters = Seq(AXI4MasterParameters(
             name = "bubbletea-streaming",
-            id = IdRange(0, 1)
+            id = IdRange(0, 1),
+            maxFlight = Some(1)
         ))
     )))
 
     dmaNode := 
+        // TLBuffer() :=
         AXI4ToTL() := 
-        AXI4UserYanker() :=
+        AXI4UserYanker(Some(1)) :=
         AXI4Fragmenter() :=
+        // AXI4IdIndexer(1) :=
+        // AXI4Buffer() :=
         seAxiNode
 
     lazy val module = new LazyModuleImp(this) {
@@ -62,13 +67,18 @@ class Bubbletea[T <: Data: Arithmetic](params: BubbleteaParams[T])(implicit p: P
         // Streaming Engine Node
         val (axi, _) = seAxiNode.out.head
 
+        val socParams = SocParams(
+            cacheLineBytes = p(FrontBusKey).blockBytes,
+            frontBusAddressBits = axi.params.addrBits,
+            frontBusDataBits = p(FrontBusKey).beatBytes * 8
+        )
 
         // Accelerator
         val controller = Module(new Controller(params))
 
         val meshWithDelays = Module(new MeshWithDelays(params))
 
-        val streamingStage = Module(new StreamingStage(params))
+        val streamingStage = Module(new StreamingStage(params, socParams))
 
         axi :<>= streamingStage.io.memory
 
