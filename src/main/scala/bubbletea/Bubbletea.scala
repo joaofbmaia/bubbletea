@@ -52,6 +52,11 @@ class Bubbletea[T <: Data: Arithmetic](params: BubbleteaParams[T])(implicit p: P
             run := false.B
         }
 
+        val controller = Module(new Controller(params))
+
+        val congigurationSizeInBytes = (controller.io.configuration.getWidth + 7) / 8
+        val configuration = Reg(UInt((congigurationSizeInBytes * 8).W))
+
         controlNode.regmap(
             0x00 -> Seq(
                 RegField(1, run, RegFieldDesc("run", "Run the accelerator"))
@@ -61,7 +66,8 @@ class Bubbletea[T <: Data: Arithmetic](params: BubbleteaParams[T])(implicit p: P
             ),
             0x08 -> Seq(
                 RegField.r(1, configurationDone, RegFieldDesc("configurationDone", "Configuration is done"))
-            )
+            ),
+            0x0C -> RegField.bytes(configuration, Some(RegFieldDesc("configuration", "Configuration bitstream")))
         )
 
         // Streaming Engine Node
@@ -74,7 +80,6 @@ class Bubbletea[T <: Data: Arithmetic](params: BubbleteaParams[T])(implicit p: P
         )
 
         // Accelerator
-        val controller = Module(new Controller(params))
 
         val meshWithDelays = Module(new MeshWithDelays(params))
 
@@ -82,7 +87,7 @@ class Bubbletea[T <: Data: Arithmetic](params: BubbleteaParams[T])(implicit p: P
 
         axi :<>= streamingStage.io.memory
 
-        controller.io.configuration := 0.U.asTypeOf(controller.io.configuration) //io.configuration
+        controller.io.configuration := configuration.asTypeOf(controller.io.configuration) //io.configuration
         controller.io.globalControl :<>= globalControl
 
         streamingStage.io.control.reset := controller.io.acceleratorControl.reset
