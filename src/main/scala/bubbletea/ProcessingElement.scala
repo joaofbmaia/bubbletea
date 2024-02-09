@@ -4,8 +4,6 @@ import chisel3._
 import chisel3.util.log2Ceil
 import chisel3.util.MuxLookup
 import chisel3.util.RegEnable
-import chisel3.reflect.DataMirror
-import chisel3.experimental.requireIsChiselType
 
 class OutRegsSrcSelBundle[T <: Data](params: BubbleteaParams[T]) extends Bundle {
   // Allowed Sources: FU output, inputs, RF
