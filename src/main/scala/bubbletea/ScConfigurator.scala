@@ -2,6 +2,7 @@ package bubbletea
 
 import chisel3._
 import chisel3.util._
+import os.stat
 
 class ScConfiguratorControlBundle extends Bundle {
   val reset = Output(Bool())
@@ -20,21 +21,15 @@ class ScConfigurator[T <: Data](params: BubbleteaParams[T], socParams: SocParams
 
   val mask = Wire(Vec(io.staticConfigurationMemory.scLines, Bool()))
 
-  val staticConfiguration = Reg(UInt((new AcceleratorStaticConfigurationBundle(params)).getWidth.W))
+  val staticConfiguration = Reg(Vec(io.staticConfigurationMemory.scLines, UInt(io.staticConfigurationMemory.scLineWidth.W)))
   io.staticConfiguration := staticConfiguration.asTypeOf(new AcceleratorStaticConfigurationBundle(params))
 
   val nextAddress = Wire(UInt(log2Ceil(io.staticConfigurationMemory.scLines).W))
   io.staticConfigurationMemory.address := nextAddress
 
-  for (i <- 0 until io.staticConfigurationMemory.scLines) {
+  staticConfiguration.zipWithIndex.foreach { case (line, i) =>
     when(mask(i)) {
-      val l = i * io.staticConfigurationMemory.scLineWidth
-      val h = if (i == io.staticConfigurationMemory.scLines - 1) {
-          (i + 1) * io.staticConfigurationMemory.scLineWidth - 1
-      } else {
-          staticConfiguration.getWidth - 1
-      }
-      staticConfiguration(h, l) := io.staticConfigurationMemory.data
+      line := io.staticConfigurationMemory.data
     }
   }
 
@@ -50,6 +45,7 @@ class ScConfigurator[T <: Data](params: BubbleteaParams[T], socParams: SocParams
 
   io.control.done := false.B
   mask.foreach(_ := false.B)
+  nextAddress := DontCare
   switch(state) {
     is(State.ready) {
       when(io.control.configure) {

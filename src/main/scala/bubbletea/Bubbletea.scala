@@ -42,14 +42,15 @@ class Bubbletea[T <: Data: Arithmetic](params: BubbleteaParams[T])(implicit p: P
         seAxiNode
 
 
-    val socParams = SocParams(
+    val socParamsController = SocParams(
         cacheLineBytes = p(FrontBusKey).blockBytes,
-        frontBusAddressBits = seAxiNode.out.head._1.params.addrBits,
-        frontBusDataBits = p(FrontBusKey).beatBytes * 8
+        frontBusAddressBits = 0, // the controller does not use this field
+        frontBusDataBits = p(FrontBusKey).beatBytes * 8,
+        xLen = p(XLen)
     )
 
     // Controller
-    val controller = LazyModule(new Controller(params, socParams))
+    val controller = LazyModule(new Controller(params, socParamsController))
 
     // Connect both the controller(contains the configuration DMA) and the streaming engine to the DMA crossbar
     dmaXbar.node := seNode
@@ -62,16 +63,22 @@ class Bubbletea[T <: Data: Arithmetic](params: BubbleteaParams[T])(implicit p: P
     val controllerIoSink = controller.ioNode.makeSink()
 
     lazy val module = new LazyModuleImp(this) {
+        val socParams = SocParams(
+            cacheLineBytes = p(FrontBusKey).blockBytes,
+            frontBusAddressBits = seAxiNode.out.head._1.params.addrBits,
+            frontBusDataBits = p(FrontBusKey).beatBytes * 8,
+            xLen = p(XLen)
+        )
 
         // Control Registers
-        val globalControl = Wire(new ControlBundle)
+        val globalControl = Wire(new ControlBundle(socParams))
 
         val run = RegInit(false.B)
         val done = Wire(Bool())
         val loadBitstream = RegInit(false.B)
         val loadBitstreamDone = Wire(Bool())
         val configurationDone = Wire(Bool())
-        val bitstreamBaseAddress = Reg(UInt(64.W))
+        val bitstreamBaseAddress = Reg(UInt(socParams.xLen.W))
 
         globalControl.run := run
         done := globalControl.done
@@ -98,20 +105,20 @@ class Bubbletea[T <: Data: Arithmetic](params: BubbleteaParams[T])(implicit p: P
             0x00 -> Seq(
                 RegField(1, run, RegFieldDesc("run", "Run the accelerator"))
             ),
-            0x04 -> Seq(
+            0x01 -> Seq(
                 RegField.r(1, done, RegFieldDesc("done", "Accelerator is done"))
             ),
-            0x08 -> Seq(
+            0x02 -> Seq(
                 RegField(1, loadBitstream, RegFieldDesc("loadBitstream", "Load the configuration bitstream"))
             ),
-            0x0C -> Seq(
+            0x03 -> Seq(
                 RegField.r(1, loadBitstreamDone, RegFieldDesc("loadBitstreanDone", "The configuration bitsteam is loaded (but not necessarily configured)"))
             ),
-            0x10 -> Seq(
+            0x04 -> Seq(
                 RegField.r(1, configurationDone, RegFieldDesc("configurationDone", "The bitstream is configured in the accelerator and the accelerator will run (a new bitstream can be loaded now)"))
             ),
-            0x14 -> Seq(
-                RegField(64, bitstreamBaseAddress, RegFieldDesc("bitstreamBaseAddress", "Configuration bitstream base address"))
+            0x10 -> Seq(
+                RegField(socParams.xLen, bitstreamBaseAddress, RegFieldDesc("bitstreamBaseAddress", "Configuration bitstream base address"))
             )
         )
 

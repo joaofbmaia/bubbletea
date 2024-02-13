@@ -11,7 +11,7 @@ class ConfigurationBundle[T <: Data](params: BubbleteaParams[T]) extends Bundle 
   val streamingEngineInstructions = Vec(params.maxConfigurationInstructions, new StreamingEngineCompressedConfigurationChannelBundle(params))
 }
 
-class ControlBundle extends Bundle {
+class ControlBundle(socParams: SocParams) extends Bundle {
   val run = Output(Bool())
   val runTriggered = Input(Bool())
   val done = Input(Bool())
@@ -19,7 +19,7 @@ class ControlBundle extends Bundle {
   val loadBitsteamTriggered = Input(Bool())
   val loadBitstreamDone = Input(Bool())
   val configurationDone = Input(Bool())
-  val bitstreamBaseAddress = Output(UInt(64.W))
+  val bitstreamBaseAddress = Output(UInt(socParams.xLen.W))
 }
 
 class AcceleratorStaticConfigurationBundle[T <: Data](params: BubbleteaParams[T]) extends Bundle {
@@ -34,8 +34,8 @@ class AcceleratorControlBundle[T <: Data](params: BubbleteaParams[T]) extends Bu
   val done = Input(Bool())
 }
 
-class ControllerIo[T <: Data](params: BubbleteaParams[T]) extends Bundle {
-  val globalControl = Flipped(new ControlBundle)
+class ControllerIo[T <: Data](params: BubbleteaParams[T], socParams: SocParams) extends Bundle {
+  val globalControl = Flipped(new ControlBundle(socParams))
   val acceleratorControl = new AcceleratorControlBundle(params)
   val staticConfiguration = Output(new AcceleratorStaticConfigurationBundle(params))
   val seConfigurationChannel = Decoupled(new StreamingEngineConfigurationChannelBundle(params))
@@ -51,7 +51,7 @@ class Controller[T <: Data: Arithmetic](params: BubbleteaParams[T], socParams: S
 
   val configurationDmaIoSink = configurationDma.ioNode.makeSink()
 
-  val ioNode = BundleBridgeSource(() => new ControllerIo(params))
+  val ioNode = BundleBridgeSource(() => new ControllerIo(params, socParams))
 
   lazy val module = new LazyModuleImp(this) {
     // Instantiations

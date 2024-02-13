@@ -26,21 +26,22 @@ class StreamingEngineInstructionsMemoryBundle[T <: Data](params: BubbleteaParams
 }
 
 class StaticConfigurationMemoryBundle[T <: Data](params: BubbleteaParams[T], socParams: SocParams) extends Bundle {
-  val scNumBytes = (new BitstreamBundle[T](params, socParams)).static.getWidth / 8 + (new BitstreamBundle[T](params, socParams)).padding1.getWidth / 8
-  val scLineWidth = socParams.cacheLineBytes
-  val scLines = scNumBytes / scLineWidth
+  val scNumBytes = ((new BitstreamBundle[T](params, socParams)).static.getWidth + (new BitstreamBundle[T](params, socParams)).padding1.getWidth) / 8
+  val scLineWidthBytes = socParams.cacheLineBytes
+  val scLineWidth = scLineWidthBytes * 8
+  val scLines = scNumBytes / scLineWidthBytes
 
   val address = Output(UInt(log2Ceil(scLines).W))
   val data = Input(UInt(scLineWidth.W))
 }
 
 class StreamingEngineBytePaddedCompressedConfigurationChannelBundle[T <: Data](params: BubbleteaParams[T], socParams: SocParams) extends Bundle {
-  val padding = UInt(calcAlignPadding(compressedInstruction.getWidth, socParams.frontBusDataBits).W)
+  val padding = UInt(calcAlignPadding((new StreamingEngineCompressedConfigurationChannelBundle(params)).getWidth, socParams.frontBusDataBits).W)
   val compressedInstruction = new StreamingEngineCompressedConfigurationChannelBundle(params)
 }
 
 class ConfigurationDmaIo[T <: Data](params: BubbleteaParams[T], socParams: SocParams) extends Bundle {
-  val configurationBaseAddress = Input(UInt(64.W))
+  val configurationBaseAddress = Input(UInt(socParams.xLen.W))
   val start = Input(Bool())
   val startTriggered = Output(Bool())
   val streamingEngineInstructionsDone = Output(Bool())
@@ -91,7 +92,7 @@ class ConfigurationDma[T <: Data: Arithmetic](params: BubbleteaParams[T], socPar
     val scBaseAddress = WireInit(io.configurationBaseAddress + (new BitstreamBundle[T](params, socParams)).streamingEngineInstructions.getWidth.U / 8.U + (new BitstreamBundle[T](params, socParams)).padding0.getWidth.U / 8.U)
 
     val scBlockBytes = socParams.cacheLineBytes
-    val scNumBytes = (new BitstreamBundle[T](params, socParams)).static.getWidth / 8 + (new BitstreamBundle[T](params, socParams)).padding1.getWidth / 8
+    val scNumBytes = ((new BitstreamBundle[T](params, socParams)).static.getWidth + (new BitstreamBundle[T](params, socParams)).padding1.getWidth) /8
     require(scNumBytes % scBlockBytes == 0, "Static Configuration size must be a multiple of the cache line size. This shouldn't ever happen, as the static configuration bundle is padded to the cache line")
     val scBeatsPerBlock = scBlockBytes / beatBytes
     val scNumBlocks = scNumBytes / scBlockBytes

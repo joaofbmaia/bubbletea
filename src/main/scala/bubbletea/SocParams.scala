@@ -3,5 +3,6 @@ package bubbletea
 case class SocParams(
     cacheLineBytes: Int,
     frontBusAddressBits: Int,
-    frontBusDataBits: Int
+    frontBusDataBits: Int,
+    xLen: Int
 )
