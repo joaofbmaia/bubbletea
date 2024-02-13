@@ -5,7 +5,6 @@ import chisel3.util._
 import freechips.rocketchip.diplomacy._
 import org.chipsalliance.cde.config._
 import freechips.rocketchip.tilelink._
-import freechips.rocketchip.util.Annotated
 
 // This represents the bitstream disposition in memory (remember that the lower fields of the bundle are the higher bytes in memory)
 class BitstreamBundle[T <: Data](params: BubbleteaParams[T], socParams: SocParams) extends Bundle {
@@ -17,14 +16,22 @@ class BitstreamBundle[T <: Data](params: BubbleteaParams[T], socParams: SocParam
 }
 
 class ConfigurationMemoryBundle[T <: Data](params: BubbleteaParams[T], socParams: SocParams) extends Bundle {
+  val streamingEngineInstructions = new StreamingEngineInstructionsMemoryBundle(params)
+  val staticConfiguration = new StaticConfigurationMemoryBundle(params, socParams)
+}
+
+class StreamingEngineInstructionsMemoryBundle[T <: Data](params: BubbleteaParams[T]) extends Bundle {
+  val address = Output(UInt(log2Ceil(params.maxConfigurationInstructions).W))
+  val data = Input(new StreamingEngineCompressedConfigurationChannelBundle(params))
+}
+
+class StaticConfigurationMemoryBundle[T <: Data](params: BubbleteaParams[T], socParams: SocParams) extends Bundle {
   val scNumBytes = (new BitstreamBundle[T](params, socParams)).static.getWidth / 8 + (new BitstreamBundle[T](params, socParams)).padding1.getWidth / 8
   val scLineWidth = socParams.cacheLineBytes
   val scLines = scNumBytes / scLineWidth
 
-  val streamingEngineInstructionsMemoryAddress = Output(UInt(log2Ceil(params.maxConfigurationInstructions).W))
-  val streamingEngineInstructionsMemoryData = Input(new StreamingEngineCompressedConfigurationChannelBundle(params))
-  val staticConfigurationMemoryAddress = Output(UInt(log2Ceil(scLines).W))
-  val staticConfigurationMemoryData = Input(UInt(scLineWidth.W))
+  val address = Output(UInt(log2Ceil(scLines).W))
+  val data = Input(UInt(scLineWidth.W))
 }
 
 class StreamingEngineBytePaddedCompressedConfigurationChannelBundle[T <: Data](params: BubbleteaParams[T], socParams: SocParams) extends Bundle {
@@ -32,21 +39,27 @@ class StreamingEngineBytePaddedCompressedConfigurationChannelBundle[T <: Data](p
   val compressedInstruction = new StreamingEngineCompressedConfigurationChannelBundle(params)
 }
 
-class ConfigurationDMA[T <: Data: Arithmetic](params: BubbleteaParams[T], socParams: SocParams)(implicit p: Parameters) extends LazyModule {
+class ConfigurationDmaIo[T <: Data](params: BubbleteaParams[T], socParams: SocParams) extends Bundle {
+  val configurationBaseAddress = Input(UInt(64.W))
+  val start = Input(Bool())
+  val startTriggered = Output(Bool())
+  val streamingEngineInstructionsDone = Output(Bool())
+  val done = Output(Bool())
+  val configurationMemoryInterface = Flipped(new ConfigurationMemoryBundle(params, socParams))
+}
+
+class ConfigurationDma[T <: Data: Arithmetic](params: BubbleteaParams[T], socParams: SocParams)(implicit p: Parameters) extends LazyModule {
   val node = TLClientNode(Seq(TLMasterPortParameters.v1(Seq(TLMasterParameters.v1(
     name = "bubbletea-configuration-dma",
     sourceId = IdRange(0, 1)
   )))))
 
+  val id = 1
+
+  val ioNode = BundleBridgeSource(() => new ConfigurationDmaIo(params, socParams))
+
   lazy val module = new LazyModuleImp(this) {
-    val io = IO(new Bundle {
-      val configurationBaseAddress = Input(UInt(64.W))
-      val start = Input(Bool())
-      val streamingEngineInstructionsDone = Output(Bool())
-      val done = Output(Bool())
-      val controlReset = Input(Bool())
-      val configurationMemoryInterface = Flipped(new ConfigurationMemoryBundle(params, socParams))
-    })
+    val io = ioNode.bundle
 
     val (mem, edge) = node.out.head
     val addressBits = edge.bundle.addressBits
@@ -56,7 +69,7 @@ class ConfigurationDMA[T <: Data: Arithmetic](params: BubbleteaParams[T], socPar
       val done, seiTransfering, scTransfering = Value
     }
 
-    val state = withReset(reset.asBool || io.controlReset)(RegInit(State.done))
+    val state = RegInit(State.done)
     val address = Reg(UInt(addressBits.W))
 
     // SEI = Streaming Engine Instructions
@@ -67,12 +80,12 @@ class ConfigurationDMA[T <: Data: Arithmetic](params: BubbleteaParams[T], socPar
     val seiBeatsPerBurst = seiBytesPerInstruction / beatBytes
     val seiNumBursts = params.maxConfigurationInstructions
     
-    val seiRequestesLeft = withReset(reset.asBool || io.controlReset)(RegInit(seiNumBursts.U))
-    val seiBurstsLeft = withReset(reset.asBool || io.controlReset)(RegInit(seiNumBursts.U))
+    val seiRequestesLeft = Reg(UInt(log2Ceil(seiNumBursts + 1).W))
+    val seiBurstsLeft = Reg(UInt(log2Ceil(seiNumBursts + 1).W))
 
     val seiBeatsBuffer = Reg(Vec(seiBeatsPerBurst - 1, UInt(beatBytes.W)))
     val seiMemory = SyncReadMem(seiNumBursts, new StreamingEngineCompressedConfigurationChannelBundle(params))
-    val seiBeatsLeft = withReset(reset.asBool || io.controlReset)(RegInit(seiBeatsPerBurst.U))
+    val seiBeatsLeft = Reg(UInt(log2Ceil(seiBeatsPerBurst + 1).W))
 
 
     val scBaseAddress = WireInit(io.configurationBaseAddress + (new BitstreamBundle[T](params, socParams)).streamingEngineInstructions.getWidth.U / 8.U + (new BitstreamBundle[T](params, socParams)).padding0.getWidth.U / 8.U)
@@ -83,37 +96,46 @@ class ConfigurationDMA[T <: Data: Arithmetic](params: BubbleteaParams[T], socPar
     val scBeatsPerBlock = scBlockBytes / beatBytes
     val scNumBlocks = scNumBytes / scBlockBytes
 
-    val scRequestesLeft = withReset(reset.asBool || io.controlReset)(RegInit(scNumBlocks.U))
-    val scResponseBytesLeft = withReset(reset.asBool || io.controlReset)(RegInit(scNumBytes.U))
+    val scRequestesLeft = Reg(UInt(log2Ceil(scNumBlocks + 1).W))
+    val scResponseBytesLeft = Reg(UInt(log2Ceil(scNumBytes + 1).W))
 
     val scMemory = SyncReadMem(scNumBlocks, Vec(scBeatsPerBlock, UInt((beatBytes * 8).W)))
-    // initialize the write mask to write the first beat (0001). also the mask is one hot, since we can only write one beat at a time
-    val scWriteMask = withReset(reset.asBool || io.controlReset)(RegInit(VecInit(Seq.tabulate(scBeatsPerBlock)(i => if(i == 0) true.B else false.B))))
+    val scWriteMask = Reg(Vec(scBeatsPerBlock, Bool()))
     val scMemoryWriteData = WireInit(VecInit(Seq.fill(scBeatsPerBlock)(mem.d.bits.data)))
 
 
     // Connect local configuration memory interfaces
-    io.configurationMemoryInterface.streamingEngineInstructionsMemoryData := seiMemory.read(io.configurationMemoryInterface.streamingEngineInstructionsMemoryAddress)
-    io.configurationMemoryInterface.staticConfigurationMemoryData := scMemory.read(io.configurationMemoryInterface.staticConfigurationMemoryAddress).asUInt
+    io.configurationMemoryInterface.streamingEngineInstructions.data := Mux(state =/= State.seiTransfering, seiMemory.read(io.configurationMemoryInterface.streamingEngineInstructions.address), DontCare)
+    io.configurationMemoryInterface.staticConfiguration.data := Mux(state =/= State.scTransfering, scMemory.read(io.configurationMemoryInterface.staticConfiguration.address).asUInt, DontCare)
 
-    io.streamingEngineInstructionsDone := state === State.scTransfering
+    io.streamingEngineInstructionsDone := state =/= State.seiTransfering
     io.done := state === State.done
 
     mem.a.valid := false.B
     mem.a.bits := DontCare
     mem.d.ready := false.B
+    io.startTriggered := false.B
 
     switch(state) {
       is(State.done) {
         when(io.start) {
+          io.startTriggered := true.B
           state := State.seiTransfering
+          // Set initial values in the registers
           address := io.configurationBaseAddress
+          seiRequestesLeft := seiNumBursts.U
+          seiBurstsLeft := seiNumBursts.U
+          seiBeatsLeft := seiBeatsPerBurst.U
+          scRequestesLeft := scNumBlocks.U
+          scResponseBytesLeft := scNumBytes.U
+          // initialize the write mask to write the first beat (0001). also the mask is one hot, since we can only write one beat at a time
+          scWriteMask := VecInit(Seq.tabulate(scBeatsPerBlock)(i => if(i == 0) true.B else false.B))
         }
       }
       // This state is responsible for transfering the Streaming Engine Instructions, with burst of one instruction
       is(State.seiTransfering) {
         mem.a.bits := edge.Get(
-          fromSource = 0.U,
+          fromSource = id.U,
           toAddress = address,
           lgSize = log2Ceil(seiBytesPerInstruction).U)._2
 
@@ -156,7 +178,7 @@ class ConfigurationDMA[T <: Data: Arithmetic](params: BubbleteaParams[T], socPar
       // This state is responsible for transfering the Static Configuration, with bursts of a cache line
       is(State.scTransfering) {
         mem.a.bits := edge.Get(
-          fromSource = 0.U,
+          fromSource = id.U,
           toAddress = address,
           lgSize = log2Ceil(scBlockBytes).U)._2
 

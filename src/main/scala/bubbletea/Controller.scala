@@ -2,6 +2,9 @@ package bubbletea
 
 import chisel3._
 import chisel3.util._
+import freechips.rocketchip.diplomacy._
+import org.chipsalliance.cde.config._
+import freechips.rocketchip.tilelink._
 
 class ConfigurationBundle[T <: Data](params: BubbleteaParams[T]) extends Bundle {
   val static = new AcceleratorStaticConfigurationBundle(params)
@@ -12,7 +15,11 @@ class ControlBundle extends Bundle {
   val run = Output(Bool())
   val runTriggered = Input(Bool())
   val done = Input(Bool())
+  val loadBitstream = Output(Bool())
+  val loadBitsteamTriggered = Input(Bool())
+  val loadBitstreamDone = Input(Bool())
   val configurationDone = Input(Bool())
+  val bitstreamBaseAddress = Output(UInt(64.W))
 }
 
 class AcceleratorStaticConfigurationBundle[T <: Data](params: BubbleteaParams[T]) extends Bundle {
@@ -27,77 +34,111 @@ class AcceleratorControlBundle[T <: Data](params: BubbleteaParams[T]) extends Bu
   val done = Input(Bool())
 }
 
-class Controller[T <: Data](params: BubbleteaParams[T]) extends Module {
-  val io = IO(new Bundle {
-    val configuration = Input(new ConfigurationBundle(params))
-    val globalControl = Flipped(new ControlBundle)
+class ControllerIo[T <: Data](params: BubbleteaParams[T]) extends Bundle {
+  val globalControl = Flipped(new ControlBundle)
+  val acceleratorControl = new AcceleratorControlBundle(params)
+  val staticConfiguration = Output(new AcceleratorStaticConfigurationBundle(params))
+  val seConfigurationChannel = Decoupled(new StreamingEngineConfigurationChannelBundle(params))
+}
 
-    val acceleratorControl = new AcceleratorControlBundle(params)
-    val staticConfiguration = new AcceleratorStaticConfigurationBundle(params)
-    val seConfigurationChannel = Decoupled(new StreamingEngineConfigurationChannelBundle(params))
-  })
+class Controller[T <: Data: Arithmetic](params: BubbleteaParams[T], socParams: SocParams)(implicit p: Parameters) extends LazyModule {
+  val node = TLIdentityNode()
 
-  // This is the hot static configuration
-  val currentStaticConfiguration = Reg(new AcceleratorStaticConfigurationBundle(params))
+  val configurationDma = LazyModule(new ConfigurationDma(params, socParams))
 
-  object State extends ChiselEnum {
-    val done, configuring, computing = Value
-  }
+  // Connect the DMA to the TL bus
+  node := configurationDma.node
 
-  val state = RegInit(State.done)
+  val configurationDmaIoSink = configurationDma.ioNode.makeSink()
 
-  val seConfigurator = Module(new SeConfigurator(params))
+  val ioNode = BundleBridgeSource(() => new ControllerIo(params))
 
-  val controlReset = Wire(Bool())
-  io.acceleratorControl.reset := controlReset
-  seConfigurator.io.control.reset := controlReset
+  lazy val module = new LazyModuleImp(this) {
+    // Instantiations
+    val io = ioNode.bundle
 
-  // The SE configuration is read directly from the configuration bundle, since it will be saved in the SE's memory
-  seConfigurator.io.configurationMemoryInput := io.configuration.streamingEngineInstructions
+    val configurationDmaIo = configurationDmaIoSink.bundle
 
-  // The SE configuration is sent to the SE
-  io.seConfigurationChannel <> seConfigurator.io.seOutput
+    object State extends ChiselEnum {
+      val done, configuringSe, configuringSeAndStatic, computing = Value
+    }
 
-  // The static configuration is sent to the accelerator
-  io.staticConfiguration := currentStaticConfiguration
+    val state = RegInit(State.done)
 
-  // Control logic below
+    val seConfigurator = Module(new SeConfigurator(params))
+    val scConfigurator = Module(new ScConfigurator(params, socParams))
 
-  // Default values
-  controlReset := false.B
-  io.acceleratorControl.run := false.B
-  io.globalControl.configurationDone := true.B
-  io.globalControl.done := true.B
-  io.globalControl.runTriggered := false.B
-  seConfigurator.io.control.configure := false.B
+    // Wires
+    val configurationDone = Wire(Bool())
+    val runTriggered = Wire(Bool())
 
-  switch(state) {
-    is(State.done) {
-      when(io.globalControl.run) {
-        state := State.configuring
-        currentStaticConfiguration := io.configuration.static
-        controlReset := true.B
-        io.globalControl.runTriggered := true.B
+
+    
+    // Configuration Data path connections
+  
+    io.seConfigurationChannel <> seConfigurator.io.seOutput
+    io.staticConfiguration := scConfigurator.io.staticConfiguration
+    configurationDmaIo.configurationMemoryInterface.streamingEngineInstructions :<>= seConfigurator.io.instructionsMemory
+    configurationDmaIo.configurationMemoryInterface.staticConfiguration :<>= scConfigurator.io.staticConfigurationMemory
+
+
+
+    // Control logic
+
+    // FSM State transitions
+    switch(state) {
+      is(State.done) {
+        when(io.globalControl.run) {
+          when(configurationDmaIo.streamingEngineInstructionsDone) {
+            // Both the SEI and SC are available in the configuration memory
+            when(configurationDmaIo.done) {
+              state := State.configuringSeAndStatic
+            }.otherwise {
+              state := State.configuringSe
+            }
+          }
+        }
+      }
+      is(State.configuringSe) {
+        when(configurationDmaIo.done) {
+          state := State.configuringSeAndStatic
+        }
+      }
+      is(State.configuringSeAndStatic) {
+        when(seConfigurator.io.control.done && scConfigurator.io.control.done) {
+          state := State.computing
+        }
+      }
+      is(State.computing) {
+        when(io.acceleratorControl.done) {
+          state := State.done
+        }
       }
     }
-    is(State.configuring) {
-      io.globalControl.done := false.B
-      io.globalControl.configurationDone := false.B
-      seConfigurator.io.control.configure := true.B
 
-      when(seConfigurator.io.control.done) {
-        state := State.computing
-      }
+    // FSM Outputs
+    runTriggered := (state === State.done) && io.globalControl.run && configurationDmaIo.streamingEngineInstructionsDone
+    configurationDone := state === State.computing || state === State.done
+    io.globalControl.done := state === State.done
+    seConfigurator.io.control.configure := state === State.configuringSe || state === State.configuringSeAndStatic
+    scConfigurator.io.control.configure := state === State.configuringSeAndStatic
 
-    }
-    is(State.computing) {
-      io.globalControl.done := false.B
-      io.acceleratorControl.run := true.B
-      
+    // Global control outputs
+    io.globalControl.runTriggered := runTriggered
+    io.globalControl.configurationDone := configurationDone
+    io.globalControl.loadBitstreamDone := configurationDmaIo.done
+    io.globalControl.loadBitsteamTriggered := configurationDmaIo.startTriggered
 
-      when(io.acceleratorControl.done) {
-        state := State.done
-      }
-    }
+    // Control outputs to the DMA
+    configurationDmaIo.start := io.globalControl.loadBitstream && configurationDone
+    configurationDmaIo.configurationBaseAddress := io.globalControl.bitstreamBaseAddress
+
+    // Control outputs to the accelerator
+    io.acceleratorControl.run := state === State.computing
+    io.acceleratorControl.reset := io.globalControl.runTriggered
+
+    // Control outputs to the configurators
+    seConfigurator.io.control.reset := io.globalControl.runTriggered
+    scConfigurator.io.control.reset := io.globalControl.runTriggered
   }
 }

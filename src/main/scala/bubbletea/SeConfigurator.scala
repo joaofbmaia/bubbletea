@@ -26,7 +26,7 @@ class SeConfiguratorControlBundle extends Bundle {
 class SeConfigurator[T <: Data](params: BubbleteaParams[T]) extends Module {
   val io = IO(new Bundle {
     val control = Flipped(new SeConfiguratorControlBundle)
-    val configurationMemoryInput = Input(Vec(params.maxConfigurationInstructions, new StreamingEngineCompressedConfigurationChannelBundle(params)))
+    val instructionsMemory = new StreamingEngineInstructionsMemoryBundle(params)
     val seOutput = Decoupled(new StreamingEngineConfigurationChannelBundle(params))
   })
 
@@ -36,9 +36,12 @@ class SeConfigurator[T <: Data](params: BubbleteaParams[T]) extends Module {
 
   val state = withReset(reset.asBool || io.control.reset)(RegInit(State.ready))
   val instructionCounter = withReset(reset.asBool || io.control.reset)(Counter(params.maxConfigurationInstructions))
+  val nextAddress = Wire(UInt(log2Ceil(params.maxConfigurationInstructions).W))
+
+  io.instructionsMemory.address := nextAddress
 
   // Decode the compressed instruction
-  val compressedInstruction = io.configurationMemoryInput(instructionCounter.value)
+  val compressedInstruction = io.instructionsMemory.data
 
   io.seOutput.bits.start := compressedInstruction.start
   io.seOutput.bits.end := compressedInstruction.end
@@ -57,6 +60,7 @@ class SeConfigurator[T <: Data](params: BubbleteaParams[T]) extends Module {
 
   io.seOutput.valid := DontCare
   io.control.done := DontCare
+  nextAddress := DontCare
   switch(state) {
     is(State.ready) {
       io.seOutput.valid := false.B
@@ -64,17 +68,21 @@ class SeConfigurator[T <: Data](params: BubbleteaParams[T]) extends Module {
 
       when(io.control.configure) {
         state := State.configuring
+        nextAddress := instructionCounter.value
       }
     }
     is(State.configuring) {
-      io.seOutput.valid := io.configurationMemoryInput(instructionCounter.value).isValid
+      io.seOutput.valid := compressedInstruction.isValid
       io.control.done := false.B
 
       when(io.seOutput.fire) {
+        nextAddress := instructionCounter.value + 1.U
         instructionCounter.inc()
-      }
+      } .otherwise(
+        nextAddress := instructionCounter.value
+      )
 
-      when(!io.configurationMemoryInput(instructionCounter.value).isValid) {
+      when(!compressedInstruction.isValid) {
         state := State.done
       }
     }

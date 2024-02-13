@@ -10,14 +10,21 @@ import freechips.rocketchip.amba.axi4._
 import freechips.rocketchip.tile._
 
 class Bubbletea[T <: Data: Arithmetic](params: BubbleteaParams[T])(implicit p: Parameters) extends LazyModule {
+    // Control TileLink Interface (connected to the periphery bus as a slave)
     val device = new SimpleDevice("bubbletea", Seq("inesc,bubbletea0"))
     val controlNode = TLRegisterNode(
         address = Seq(AddressSet(params.baseAddress, 0x1000 - 1)),
         device = device,
         beatBytes = p(PeripheryBusKey).beatBytes
     )
+    // DMA TileLink Interface (connected to the front bus as a master)
     val dmaNode = TLIdentityNode()
 
+    // The DMA crossbar, used so that both the streaming engine and the configuration DMA can access the front bus
+    // The streaming engine has priority over the configuration DMA, since it uses ID 0 and the configuration DMA uses ID 1
+    val dmaXbar = LazyModule(new TLXbar(TLArbiter.lowestIndexFirst))
+
+    // Streaming Engine AXI4 Node
     val seAxiNode = AXI4MasterNode(Seq(AXI4MasterPortParameters(
         masters = Seq(AXI4MasterParameters(
             name = "bubbletea-streaming",
@@ -26,14 +33,33 @@ class Bubbletea[T <: Data: Arithmetic](params: BubbleteaParams[T])(implicit p: P
         ))
     )))
 
-    dmaNode := 
-        // TLBuffer() :=
+    // Convert the AXI4 interface to TileLink
+    val seNode = TLIdentityNode()
+    seNode := 
         AXI4ToTL() := 
         AXI4UserYanker(Some(1)) :=
         AXI4Fragmenter() :=
-        // AXI4IdIndexer(1) :=
-        // AXI4Buffer() :=
         seAxiNode
+
+
+    val socParams = SocParams(
+        cacheLineBytes = p(FrontBusKey).blockBytes,
+        frontBusAddressBits = seAxiNode.out.head._1.params.addrBits,
+        frontBusDataBits = p(FrontBusKey).beatBytes * 8
+    )
+
+    // Controller
+    val controller = LazyModule(new Controller(params, socParams))
+
+    // Connect both the controller(contains the configuration DMA) and the streaming engine to the DMA crossbar
+    dmaXbar.node := seNode
+    dmaXbar.node := controller.node
+
+    // Connect the DMA crossbar to the top node
+    dmaNode := dmaXbar.node
+
+    
+    val controllerIoSink = controller.ioNode.makeSink()
 
     lazy val module = new LazyModuleImp(this) {
 
@@ -42,20 +68,31 @@ class Bubbletea[T <: Data: Arithmetic](params: BubbleteaParams[T])(implicit p: P
 
         val run = RegInit(false.B)
         val done = Wire(Bool())
+        val loadBitstream = RegInit(false.B)
+        val loadBitstreamDone = Wire(Bool())
         val configurationDone = Wire(Bool())
+        val bitstreamBaseAddress = Reg(UInt(64.W))
 
         globalControl.run := run
         done := globalControl.done
+        globalControl.loadBitstream := loadBitstream
+        loadBitstreamDone := globalControl.loadBitstreamDone
         configurationDone := globalControl.configurationDone
+        globalControl.bitstreamBaseAddress := bitstreamBaseAddress
 
         when(globalControl.runTriggered) {
             run := false.B
         }
 
-        val controller = Module(new Controller(params))
+        when(globalControl.loadBitsteamTriggered) {
+            loadBitstream := false.B
+        }
 
-        val congigurationSizeInBytes = (controller.io.configuration.getWidth + 7) / 8
-        val configuration = Reg(UInt((congigurationSizeInBytes * 8).W))
+        // Streaming Engine Node
+        val (axi, _) = seAxiNode.out.head
+
+        // Controller
+        val controllerIo = controllerIoSink.bundle
 
         controlNode.regmap(
             0x00 -> Seq(
@@ -65,18 +102,17 @@ class Bubbletea[T <: Data: Arithmetic](params: BubbleteaParams[T])(implicit p: P
                 RegField.r(1, done, RegFieldDesc("done", "Accelerator is done"))
             ),
             0x08 -> Seq(
-                RegField.r(1, configurationDone, RegFieldDesc("configurationDone", "Configuration is done"))
+                RegField(1, loadBitstream, RegFieldDesc("loadBitstream", "Load the configuration bitstream"))
             ),
-            0x0C -> RegField.bytes(configuration, Some(RegFieldDesc("configuration", "Configuration bitstream")))
-        )
-
-        // Streaming Engine Node
-        val (axi, _) = seAxiNode.out.head
-
-        val socParams = SocParams(
-            cacheLineBytes = p(FrontBusKey).blockBytes,
-            frontBusAddressBits = axi.params.addrBits,
-            frontBusDataBits = p(FrontBusKey).beatBytes * 8
+            0x0C -> Seq(
+                RegField.r(1, loadBitstreamDone, RegFieldDesc("loadBitstreanDone", "The configuration bitsteam is loaded (but not necessarily configured)"))
+            ),
+            0x10 -> Seq(
+                RegField.r(1, configurationDone, RegFieldDesc("configurationDone", "The bitstream is configured in the accelerator and the accelerator will run (a new bitstream can be loaded now)"))
+            ),
+            0x14 -> Seq(
+                RegField(64, bitstreamBaseAddress, RegFieldDesc("bitstreamBaseAddress", "Configuration bitstream base address"))
+            )
         )
 
         // Accelerator
@@ -87,12 +123,11 @@ class Bubbletea[T <: Data: Arithmetic](params: BubbleteaParams[T])(implicit p: P
 
         axi :<>= streamingStage.io.memory
 
-        controller.io.configuration := configuration.asTypeOf(controller.io.configuration) //io.configuration
-        controller.io.globalControl :<>= globalControl
+        controllerIo.globalControl :<>= globalControl
 
-        streamingStage.io.control.reset := controller.io.acceleratorControl.reset
-        streamingStage.io.control.meshRun := controller.io.acceleratorControl.run
-        controller.io.acceleratorControl.done := streamingStage.io.control.done
+        streamingStage.io.control.reset := controllerIo.acceleratorControl.reset
+        streamingStage.io.control.meshRun := controllerIo.acceleratorControl.run
+        controllerIo.acceleratorControl.done := streamingStage.io.control.done
 
         meshWithDelays.io.fire := streamingStage.io.control.meshFire
         meshWithDelays.io.in := streamingStage.io.meshDataOut
@@ -100,10 +135,10 @@ class Bubbletea[T <: Data: Arithmetic](params: BubbleteaParams[T])(implicit p: P
 
         // Configuration
 
-        streamingStage.io.staticConfiguration := controller.io.staticConfiguration.streamingStage
-        streamingStage.io.seConfigurationChannel :<>= controller.io.seConfigurationChannel
+        streamingStage.io.staticConfiguration := controllerIo.staticConfiguration.streamingStage
+        streamingStage.io.seConfigurationChannel :<>= controllerIo.seConfigurationChannel
 
-        meshWithDelays.io.meshConfiguration := controller.io.staticConfiguration.mesh
-        meshWithDelays.io.delayerConfiguration := controller.io.staticConfiguration.delayer
+        meshWithDelays.io.meshConfiguration := controllerIo.staticConfiguration.mesh
+        meshWithDelays.io.delayerConfiguration := controllerIo.staticConfiguration.delayer
     }   
 }
