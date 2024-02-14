@@ -14,7 +14,7 @@ class StreamingEngineTest extends AnyFlatSpec with ChiselScalatestTester {
 
   "StreamingEngine" should "emit Verilog" in {
     ChiselStage.emitSystemVerilogFile(
-      new StreamingEngine(CommonBubbleteaParams.minimalConfig),
+      new StreamingEngine(CommonBubbleteaParams.minimalConfig, SocParams(32, 32, 32, 64)),
       firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info")
     )
   }

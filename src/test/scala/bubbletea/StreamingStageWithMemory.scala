@@ -15,13 +15,13 @@ class StreamingStageWithMemory[T <: Data](params: BubbleteaParams[T], memoryAddr
     /* External read channel */
     val memReadEnable = Input(Bool())
     val memReadAddr = Input(UInt(memoryAddrWidth.W))
-    val memReadData = Output(UInt((params.seLlbNumBytes * 8).W))
+    val memReadData = Output(UInt((32 * 8).W))
 
     /* External write channel */
     val memWriteEnable = Input(Bool())
     val memWriteAddr = Input(UInt(memoryAddrWidth.W))
-    val memWriteData = Input(UInt((params.seLlbNumBytes * 8).W))
-    val memWriteStrb = Input(UInt(params.seLlbNumBytes.W))
+    val memWriteData = Input(UInt((32 * 8).W))
+    val memWriteStrb = Input(UInt(32.W))
 
     val meshDataOut = Output(new MeshData(params))
     val meshDataIn = Input(new MeshData(params))
@@ -33,13 +33,13 @@ class StreamingStageWithMemory[T <: Data](params: BubbleteaParams[T], memoryAddr
     val seConfigurationChannel = Flipped(Decoupled(new StreamingEngineConfigurationChannelBundle(params)))
   })
 
-  val streamingStage = Module(new StreamingStage(params))
+  val streamingStage = Module(new StreamingStage(params, SocParams(32, 32, 32, 64)))
 
   val memory = Module(
     new AxiMemoryBundle(
-      params.seAddressWidth,
-      params.seAxiDataWidth,
-      params.seLlbNumBytes * 8,
+      32,
+      32,
+      32 * 8,
       memoryAddrWidth,
       memoryReadDelay,
       memoryWriteDelay

@@ -11,7 +11,7 @@ import chisel3.experimental.BundleLiterals._
 class StreamingStageTest extends AnyFlatSpec with ChiselScalatestTester {
   "StreamingStage" should "do something" in {
     test(new StreamingStageWithMemory(CommonBubbleteaParams.minimalConfig, 10, 2, 2)).withAnnotations(Seq(VerilatorBackendAnnotation, WriteVcdAnnotation)) { dut =>
-      val memoryDataWidth = CommonBubbleteaParams.minimalConfig.seLlbNumBytes * 8
+      val memoryDataWidth = 32 * 8
       val loadRemaperSetup = PermutationNetworkUtils.generateSwitchSettingsFromDstMask(
         Seq(
           Seq(
@@ -167,7 +167,7 @@ class StreamingStageTest extends AnyFlatSpec with ChiselScalatestTester {
 
   it should "do something2" in {
     test(new StreamingStageWithMemory(CommonBubbleteaParams.minimalConfig, 10, 2, 2)).withAnnotations(Seq(VerilatorBackendAnnotation, WriteVcdAnnotation)) { dut =>
-      val memoryDataWidth = CommonBubbleteaParams.minimalConfig.seLlbNumBytes * 8
+      val memoryDataWidth = 32 * 8
       val loadRemaperSetup = PermutationNetworkUtils.generateSwitchSettingsFromDstMask(
         Seq(
           Seq(
@@ -361,7 +361,7 @@ class StreamingStageTest extends AnyFlatSpec with ChiselScalatestTester {
 
   it should "do something2, with vecLen 2" in {
     test(new StreamingStageWithMemory(CommonBubbleteaParams.minimalConfig, 10, 2, 2)).withAnnotations(Seq(VerilatorBackendAnnotation, WriteVcdAnnotation)) { dut =>
-      val memoryDataWidth = CommonBubbleteaParams.minimalConfig.seLlbNumBytes * 8
+      val memoryDataWidth = 32 * 8
       val loadRemaperSetup = PermutationNetworkUtils.generateSwitchSettingsFromDstMask(
         Seq(
           Seq(
@@ -555,7 +555,7 @@ class StreamingStageTest extends AnyFlatSpec with ChiselScalatestTester {
 
   it should "emit Verilog" in {
     ChiselStage.emitSystemVerilogFile(
-      new StreamingStage(CommonBubbleteaParams.minimalConfig),
+      new StreamingStage(CommonBubbleteaParams.minimalConfig, SocParams(32, 32, 32, 64)),
       firtoolOpts = Array("-disable-all-randomization", "-strip-debug-info")
     )
   }
