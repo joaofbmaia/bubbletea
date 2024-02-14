@@ -36,7 +36,12 @@ class StaticConfigurationMemoryBundle[T <: Data](params: BubbleteaParams[T], soc
 }
 
 class StreamingEngineBytePaddedCompressedConfigurationChannelBundle[T <: Data](params: BubbleteaParams[T], socParams: SocParams) extends Bundle {
-  val padding = UInt(calcAlignPadding((new StreamingEngineCompressedConfigurationChannelBundle(params)).getWidth, socParams.frontBusDataBits).W)
+  val compressedInstructionWidth = (new StreamingEngineCompressedConfigurationChannelBundle(params)).getWidth
+  val compressedInstructionBytes = (compressedInstructionWidth + 7) / 8
+  val compressedInstructionBytesNextPowerOfTwo = roundUpToNextPowerOfTwo(compressedInstructionBytes)
+  val compressedInstructionBytesNextPowerOfTwoBits = compressedInstructionBytesNextPowerOfTwo * 8
+
+  val padding = UInt(calcAlignPadding((new StreamingEngineCompressedConfigurationChannelBundle(params)).getWidth, compressedInstructionBytesNextPowerOfTwoBits).W)
   val compressedInstruction = new StreamingEngineCompressedConfigurationChannelBundle(params)
 }
 
@@ -55,7 +60,7 @@ class ConfigurationDma[T <: Data: Arithmetic](params: BubbleteaParams[T], socPar
     sourceId = IdRange(0, 1)
   )))))
 
-  val id = 1
+  val id = 0
 
   val ioNode = BundleBridgeSource(() => new ConfigurationDmaIo(params, socParams))
 
@@ -141,7 +146,7 @@ class ConfigurationDma[T <: Data: Arithmetic](params: BubbleteaParams[T], socPar
           lgSize = log2Ceil(seiBytesPerInstruction).U)._2
 
         // Send requests (ask for burst of one instruction)
-        when(seiRequestesLeft > 0.U) {
+        when(seiRequestesLeft > 0.U && seiRequestesLeft === seiBurstsLeft) {
           mem.a.valid := true.B
           when(mem.a.ready) {
             seiRequestesLeft := seiRequestesLeft - 1.U
@@ -184,7 +189,7 @@ class ConfigurationDma[T <: Data: Arithmetic](params: BubbleteaParams[T], socPar
           lgSize = log2Ceil(scBlockBytes).U)._2
 
         // Send requests (ask for burst of one cache line)
-        when(scRequestesLeft > 0.U) {
+        when(scRequestesLeft > 0.U && scRequestesLeft === scResponseBytesLeft) {
           mem.a.valid := true.B
           when(mem.a.ready) {
             scRequestesLeft := scRequestesLeft - 1.U

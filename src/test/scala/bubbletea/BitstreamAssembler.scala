@@ -22,9 +22,14 @@ class BitstreamAssember extends AnyFlatSpec with ChiselScalatestTester {
       val io = IO(new Bundle {
         val in = Input(new BitstreamBundle(params, socParams))
         val out = Output(UInt(in.getWidth.W))
+        val sizeBytes = Output(UInt(32.W))
         println(s"BitstreamBundle width: ${in.getWidth}")
         println(s"BitstreamBundle width in Bytes: ${in.getWidth / 8}")
+        val usefulBits = (new ConfigurationBundle(params)).getWidth
+        println(s"Useful bits: $usefulBits")
+        println(s"Paddings: ${in.getWidth - usefulBits}")
       })
+      io.sizeBytes := io.in.getWidth.U / 8.U
       io.out := io.in.asUInt
       //io.out := -1.S(io.in.getWidth.W).asUInt
     }) {dut => 
@@ -260,7 +265,8 @@ class BitstreamAssember extends AnyFlatSpec with ChiselScalatestTester {
 
 
     dut.io.in.poke(config)
-    val bitstream = dut.io.out.peek().litValue.toByteArray.reverse
+    val size = dut.io.sizeBytes.peek().litValue.toInt
+    val bitstream = dut.io.out.peek().litValue.toByteArray.reverse.padTo(size, 0.toByte)
     println("Bitstream:")
     bitstream.map(x => f"0x$x%02X ").grouped(4).foreach(x => println(x.mkString))
 

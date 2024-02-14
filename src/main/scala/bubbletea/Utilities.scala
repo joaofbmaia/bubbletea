@@ -26,3 +26,16 @@ object rotateRight {
         if (n <= 0) rotateLeft(value, -n)
         else (value(n-1, 0)  ## (value >> n))
 }
+
+object roundUpToNextPowerOfTwo {
+    def apply(x: Int): Int = {
+        var v = x
+        v -= 1
+        v |= v >> 1
+        v |= v >> 2
+        v |= v >> 4
+        v |= v >> 8
+        v |= v >> 16
+        v + 1
+    }
+}
