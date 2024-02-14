@@ -24,7 +24,7 @@ class ControlBundle(socParams: SocParams) extends Bundle {
 
 class AcceleratorStaticConfigurationBundle[T <: Data](params: BubbleteaParams[T]) extends Bundle {
   val streamingStage = new StreamingStageStaticConfigurationBundle(params)
-  val mesh = Vec(params.meshRows, Vec(params.meshColumns, new ProcessingElementConfigBundle(params)))
+  val mesh = Vec(params.maxInitiationInterval, Vec(params.meshRows, Vec(params.meshColumns, new ProcessingElementConfigBundle(params))))
   val delayer = new DelayerConfigBundle(params)
 }
 

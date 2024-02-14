@@ -137,6 +137,7 @@ class Bubbletea[T <: Data: Arithmetic](params: BubbleteaParams[T])(implicit p: P
         controllerIo.acceleratorControl.done := streamingStage.io.control.done
 
         meshWithDelays.io.fire := streamingStage.io.control.meshFire
+        meshWithDelays.io.currentModuloCycle := streamingStage.io.control.currentModuloCycle
         meshWithDelays.io.in := streamingStage.io.meshDataOut
         streamingStage.io.meshDataIn := meshWithDelays.io.out
 

@@ -1,6 +1,7 @@
 package bubbletea
 
 import chisel3._
+import chisel3.util._
 
 class MeshData[T <: Data](params: BubbleteaParams[T]) extends Bundle {
   val north = Vec(params.meshColumns, params.dataType)
@@ -12,20 +13,23 @@ class MeshData[T <: Data](params: BubbleteaParams[T]) extends Bundle {
 class Mesh[T <: Data: Arithmetic](params: BubbleteaParams[T]) extends Module {
   val io = IO(new Bundle {
     val fire = Input(Bool())
+    val currentModuloCycle = Input(UInt(log2Ceil(params.maxInitiationInterval).W))
 
     val in = Input(new MeshData(params))
     val out = Output(new MeshData(params))
 
-    val configuration = Input(Vec(params.meshRows, Vec(params.meshColumns, new ProcessingElementConfigBundle(params))))
+    val configuration = Input(Vec(params.maxInitiationInterval, Vec(params.meshRows, Vec(params.meshColumns, new ProcessingElementConfigBundle(params)))))
   })
 
   val pe = Seq.fill(params.meshRows, params.meshColumns)(Module(new ProcessingElement(params)))
+  val currentCycleConfiguration = Wire(Vec(params.meshRows, Vec(params.meshColumns, new ProcessingElementConfigBundle(params))))
+  currentCycleConfiguration := io.configuration(io.currentModuloCycle)
 
   // Connect the Processing Elements
   for (row <- 0 until params.meshRows) {
     for (col <- 0 until params.meshColumns) {
       pe(row)(col).io.fire := io.fire
-      pe(row)(col).io.configuration := io.configuration(row)(col)
+      pe(row)(col).io.configuration := currentCycleConfiguration(row)(col)
       if (row > 0) pe(row)(col).io.in.north := pe(row - 1)(col).io.out.south
       if (row < params.meshRows - 1) pe(row)(col).io.in.south := pe(row + 1)(col).io.out.north
       if (col > 0) pe(row)(col).io.in.west := pe(row)(col - 1).io.out.east

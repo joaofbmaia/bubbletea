@@ -16,6 +16,7 @@ class StreamingStageControlBundle[T <: Data](params: BubbleteaParams[T]) extends
   val reset = Output(Bool())
   val meshRun = Output(Bool())
   val meshFire = Input(Bool())
+  val currentModuloCycle = Input(UInt(log2Ceil(params.maxInitiationInterval).W))
   val done = Input(Bool())
 }
 
@@ -99,5 +100,6 @@ class StreamingStage[T <: Data](params: BubbleteaParams[T], socParams: SocParams
   loadRemaper.io.microStreamsOut.ready := lastCycle && meshFire //lastCycle && storeRemaper.io.microStreamsIn.ready
   storeRemaper.io.microStreamsIn.valid := lastCycle && meshFire
   io.control.meshFire := meshFire
+  io.control.currentModuloCycle := currentModuloCycle
   io.control.done := streamingEngine.io.control.storeStreamsDone
 }
