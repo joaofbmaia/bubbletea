@@ -10,19 +10,28 @@ import java.io._
 
 class BitstreamAssember extends AnyFlatSpec with ChiselScalatestTester {
   val params = CommonBubbleteaParams.minimalConfig
-  
+  val socParams = SocParams(
+    cacheLineBytes = 64,
+    frontBusAddressBits = 32,
+    frontBusDataBits = 64,
+    xLen = 64
+  )
 
   "BitstreamAssembler" should  "generate binary file with bitstream" in {
     test(new Module { 
       val io = IO(new Bundle {
-        val in = Input(new ConfigurationBundle(params))
-        val out = Output(UInt(((in.getWidth + 7) / 8 * 8).W))
+        val in = Input(new BitstreamBundle(params, socParams))
+        val out = Output(UInt(in.getWidth.W))
+        println(s"BitstreamBundle width: ${in.getWidth}")
+        println(s"BitstreamBundle width in Bytes: ${in.getWidth / 8}")
       })
       io.out := io.in.asUInt
       //io.out := -1.S(io.in.getWidth.W).asUInt
     }) {dut => 
 
-    val config = (new ConfigurationBundle(params)).Lit(
+    val config = (new BitstreamBundle(params, socParams)).Lit(
+    _.padding0 -> 0.U,
+    _.padding1 -> 0.U,
     _.static -> (new AcceleratorStaticConfigurationBundle(params).Lit(
       _.streamingStage -> (new StreamingStageStaticConfigurationBundle(params)).Lit(
         _.streamingEngine -> (new StreamingEngineStaticConfigurationBundle(params)).Lit(
@@ -232,17 +241,20 @@ class BitstreamAssember extends AnyFlatSpec with ChiselScalatestTester {
         )
       ))
     )),
-    _.streamingEngineInstructions -> Vec.Lit(Seq.fill(16)((new StreamingEngineCompressedConfigurationChannelBundle(params)).Lit(
-      _.isValid -> false.B,
-      _.stream -> 0.U,
-      _.elementWidth -> 0.U,
-      _.loadStoreOrMod -> false.B,
-      _.dimOffsetOrModSize -> 0.U,
-      _.dimSizeOtModTargetAndModBehaviour -> 0.U,
-      _.end -> false.B,
-      _.start -> false.B,
-      _.dimStrideOrModDisplacement -> 0.U,
-      _.vectorize -> true.B
+    _.streamingEngineInstructions -> Vec.Lit(Seq.fill(16)((new StreamingEngineBytePaddedCompressedConfigurationChannelBundle(params, socParams)).Lit(
+      _.padding -> 0.U,
+      _.compressedInstruction -> (new StreamingEngineCompressedConfigurationChannelBundle(params)).Lit(
+        _.isValid -> false.B,
+        _.stream -> 0.U,
+        _.elementWidth -> 0.U,
+        _.loadStoreOrMod -> false.B,
+        _.dimOffsetOrModSize -> 0.U,
+        _.dimSizeOtModTargetAndModBehaviour -> 0.U,
+        _.end -> false.B,
+        _.start -> false.B,
+        _.dimStrideOrModDisplacement -> 0.U,
+        _.vectorize -> true.B
+      )
     )):_*)
   )
 
