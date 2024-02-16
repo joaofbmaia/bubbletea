@@ -189,7 +189,7 @@ class ConfigurationDma[T <: Data: Arithmetic](params: BubbleteaParams[T], socPar
           lgSize = log2Ceil(scBlockBytes).U)._2
 
         // Send requests (ask for burst of one cache line)
-        when(scRequestesLeft > 0.U && scRequestesLeft === scResponseBytesLeft) {
+        when(scRequestesLeft > 0.U && (scRequestesLeft * scBlockBytes.U)  === scResponseBytesLeft) {
           mem.a.valid := true.B
           when(mem.a.ready) {
             scRequestesLeft := scRequestesLeft - 1.U
