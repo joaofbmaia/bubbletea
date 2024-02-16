@@ -89,7 +89,7 @@ class ConfigurationDma[T <: Data: Arithmetic](params: BubbleteaParams[T], socPar
     val seiRequestesLeft = Reg(UInt(log2Ceil(seiNumBursts + 1).W))
     val seiBurstsLeft = Reg(UInt(log2Ceil(seiNumBursts + 1).W))
 
-    val seiBeatsBuffer = Reg(Vec(seiBeatsPerBurst - 1, UInt(beatBytes.W)))
+    val seiBeatsBuffer = Reg(Vec(seiBeatsPerBurst - 1, UInt((beatBytes * 8).W)))
     val seiMemory = SyncReadMem(seiNumBursts, new StreamingEngineCompressedConfigurationChannelBundle(params))
     val seiBeatsLeft = Reg(UInt(log2Ceil(seiBeatsPerBurst + 1).W))
 
