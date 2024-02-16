@@ -41,7 +41,7 @@ class ScConfigurator[T <: Data](params: BubbleteaParams[T], socParams: SocParams
 
   val state = withReset(reset.asBool || io.control.reset)(RegInit(State.ready))
 
-  val lineCounter = withReset(reset.asBool || io.control.reset)(Counter(io.staticConfigurationMemory.scLines + 1))
+  val lineCounter = withReset(reset.asBool || io.control.reset)(Counter(io.staticConfigurationMemory.scLines))
 
   io.control.done := false.B
   mask.foreach(_ := false.B)
@@ -57,7 +57,7 @@ class ScConfigurator[T <: Data](params: BubbleteaParams[T], socParams: SocParams
       mask(lineCounter.value) := true.B
       nextAddress := lineCounter.value + 1.U
       lineCounter.inc()
-      when(lineCounter.value === io.staticConfigurationMemory.scLines.U) {
+      when(lineCounter.value === (io.staticConfigurationMemory.scLines.U - 1.U)) {
         state := State.done
       }
     }
