@@ -8,6 +8,8 @@ import circt.stage.ChiselStage
 import chisel3.experimental.VecLiterals._
 import chisel3.experimental.BundleLiterals._
 
+import bitstreamassembler._
+
 class StreamingStageTest extends AnyFlatSpec with ChiselScalatestTester {
   "StreamingStage" should "do something" in {
     test(new StreamingStageWithMemory(CommonBubbleteaParams.minimalConfig, 10, 2, 2)).withAnnotations(Seq(VerilatorBackendAnnotation, WriteVcdAnnotation)) { dut =>

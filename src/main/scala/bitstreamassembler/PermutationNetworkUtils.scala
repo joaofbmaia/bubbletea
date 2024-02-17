@@ -1,5 +1,6 @@
-package bubbletea
+package bitstreamassembler
 
+import bubbletea._
 import chisel3.util.isPow2
 import chisel3.util.log2Ceil
 

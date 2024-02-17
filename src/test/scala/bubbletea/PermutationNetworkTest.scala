@@ -4,6 +4,7 @@ import chisel3._
 import chiseltest._
 import org.scalatest.flatspec.AnyFlatSpec
 import circt.stage.ChiselStage
+import bitstreamassembler._
 
 class PermutationNetworkTest extends AnyFlatSpec with ChiselScalatestTester {
   "PermutationNetwork" should "do something" in {
