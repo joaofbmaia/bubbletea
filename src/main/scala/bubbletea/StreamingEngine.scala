@@ -87,7 +87,7 @@ class StreamingEngine[T <: Data](params: BubbleteaParams[T], socParams: SocParam
   )
 
   // Control
-  streamingEngineImpl.io.ctrl_reset := io.control.reset
+  streamingEngineImpl.io.ctrl_reset := io.control.reset || reset.asBool
 
 
 
