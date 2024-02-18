@@ -1149,6 +1149,9 @@ extends Module {
             st.active_dim.foreach {x => x := false.B}
         }
 
+        state_iter_reg.foreach {x => x := false.B}
+        state_appl_reg.foreach {x => x := false.B}
+
         hpc_ss_desc := 0.U
 
     }
