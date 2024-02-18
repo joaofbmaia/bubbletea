@@ -198,7 +198,7 @@ object CommonBubbleteaParams {
     maxConfigurationInstructions = 16,
     seMaxStreamDims = 4,
     seMaxStreamMods = 3,
-    seOffsetWidth = 32,
+    seOffsetWidth = 33,
     seStrideWidth = 32,
     seSizeWidth = 32,
     seStreamIdWidth = 32,
