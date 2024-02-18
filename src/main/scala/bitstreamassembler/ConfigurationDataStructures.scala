@@ -91,11 +91,11 @@ case class StreamingEngineCompressedConfigurationChannelData(
   stream: Int,
   elementWidth: Int,
   loadStoreOrMod: Boolean,
-  dimOffsetOrModSize: Int,
-  dimSizeOtModTargetAndModBehaviour: Int,
+  dimOffsetOrModSize: BigInt,
+  dimSizeOrModTargetAndModBehaviour: BigInt,
   end: Boolean,
   start: Boolean,
-  dimStrideOrModDisplacement: Int,
+  dimStrideOrModDisplacement: BigInt,
   vectorize: Boolean
 )
 

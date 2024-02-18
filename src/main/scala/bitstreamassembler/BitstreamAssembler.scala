@@ -189,11 +189,12 @@ class BitstreamAssember[T <: Data](configurationFile: String, params: BubbleteaP
           dut.io.in.streamingEngineInstructions(i).compressedInstruction.loadStoreOrMod
           .poke(configurationData.streamingEngineInstructions(i).loadStoreOrMod.B)
 
+          println(configurationData.streamingEngineInstructions(i).dimOffsetOrModSize)
           dut.io.in.streamingEngineInstructions(i).compressedInstruction.dimOffsetOrModSize
           .poke(configurationData.streamingEngineInstructions(i).dimOffsetOrModSize.U)
 
-          dut.io.in.streamingEngineInstructions(i).compressedInstruction.dimSizeOtModTargetAndModBehaviour
-          .poke(configurationData.streamingEngineInstructions(i).dimSizeOtModTargetAndModBehaviour.U)
+          dut.io.in.streamingEngineInstructions(i).compressedInstruction.dimSizeOrModTargetAndModBehaviour
+          .poke(configurationData.streamingEngineInstructions(i).dimSizeOrModTargetAndModBehaviour.U)
 
           dut.io.in.streamingEngineInstructions(i).compressedInstruction.end
           .poke(configurationData.streamingEngineInstructions(i).end.B)
@@ -223,7 +224,7 @@ class BitstreamAssember[T <: Data](configurationFile: String, params: BubbleteaP
 }
 
 object BitstreamAssembler extends App {
-  val configurationFile = "test.json"
+  val configurationFile = "load_no_store.json"
   val params = CommonBubbleteaParams.minimalConfig
   val socParams = SocParams(
     cacheLineBytes = 64,
@@ -362,7 +363,7 @@ object JsonTest extends App {
         elementWidth = 2,
         loadStoreOrMod = true,
         dimOffsetOrModSize = 0,
-        dimSizeOtModTargetAndModBehaviour = 16,
+        dimSizeOrModTargetAndModBehaviour = 16,
         end = false,
         start = true,
         dimStrideOrModDisplacement = 4,
@@ -374,7 +375,7 @@ object JsonTest extends App {
       elementWidth = 0,
       loadStoreOrMod = false,
       dimOffsetOrModSize = 0,
-      dimSizeOtModTargetAndModBehaviour = 0,
+      dimSizeOrModTargetAndModBehaviour = 0,
       end = false,
       start = false,
       dimStrideOrModDisplacement = 0,
