@@ -158,32 +158,32 @@ case class FloatBubbleteaParams(
 ) extends BubbleteaParams[Float]
 
 object CommonBubbleteaParams {
-  val defaultConfig = SIntBubbleteaParams(
+  val defaultConfig = FloatBubbleteaParams(
     baseAddress = 0x10080000,
-    dataType = SInt(32.W),
-    meshRows = 4,
-    meshColumns = 4,
+    dataType = Float(8, 24),
+    meshRows = 2,
+    meshColumns = 2,
     maxInitiationInterval = 4,
     maxSimultaneousLoadMacroStreams = 4,
     maxSimultaneousStoreMacroStreams = 2,
-    maxConfigurationInstructions = 32,
-    seMaxStreamDims = 8,
+    maxConfigurationInstructions = 16,
+    seMaxStreamDims = 4,
     seMaxStreamMods = 3,
-    seOffsetWidth = 32,
+    seOffsetWidth = 33,
     seStrideWidth = 32,
     seSizeWidth = 32,
     seStreamIdWidth = 32,
     seLrqNumTables = 16,
-    seLrqNumRequests = 8,
+    seLrqNumRequests = 4,
     seLlbNumTables = 4,
     seLmmuNumVecs = 4,
-    seSmmuNumAddresses = 64,
+    seSmmuNumAddresses = 32,
     seMaxNumLoadStreams = 4,
     seMaxNumStoreStreams = 4,
     rfSize = 2,
     rfReadPorts = 2,
     rfWritePorts = 2,
-    maxMeshLatency = 4
+    maxMeshLatency = 16
   )
 
   val minimalConfig = UIntBubbleteaParams(
@@ -210,6 +210,35 @@ object CommonBubbleteaParams {
     seMaxNumLoadStreams = 4,
     seMaxNumStoreStreams = 4,
     rfSize = 2,
+    rfReadPorts = 2,
+    rfWritePorts = 2,
+    maxMeshLatency = 2
+  )
+
+  val mini2x2 = UIntBubbleteaParams(
+    baseAddress = 0x10080000,
+    dataType = UInt(8.W),
+    meshRows = 2,
+    meshColumns = 2,
+    maxInitiationInterval = 4,
+    //  not minimal below
+    maxSimultaneousLoadMacroStreams = 4,
+    maxSimultaneousStoreMacroStreams = 2,
+    maxConfigurationInstructions = 16,
+    seMaxStreamDims = 4,
+    seMaxStreamMods = 3,
+    seOffsetWidth = 33,
+    seStrideWidth = 32,
+    seSizeWidth = 32,
+    seStreamIdWidth = 32,
+    seLrqNumTables = 16, // II * N * 2
+    seLrqNumRequests = 2,
+    seLlbNumTables = 4,
+    seLmmuNumVecs = 4,
+    seSmmuNumAddresses = 32,
+    seMaxNumLoadStreams = 4,
+    seMaxNumStoreStreams = 4,
+    rfSize = 4,
     rfReadPorts = 2,
     rfWritePorts = 2,
     maxMeshLatency = 2
