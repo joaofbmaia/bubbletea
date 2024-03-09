@@ -10,7 +10,6 @@ import chisel3.experimental.VecLiterals._
 import java.io._
 import upickle.default._
 import scala.io.Source
-import scala.annotation.meta.param
 
 class BitstreamAssember[T <: Data](configurationFile: String, params: BubbleteaParams[T], socParams: SocParams) extends AnyFlatSpec with ChiselScalatestTester {
   "BitstreamAssembler" should  "generate binary file with bitstream" in {
@@ -102,6 +101,11 @@ class BitstreamAssember[T <: Data](configurationFile: String, params: BubbleteaP
               dut.io.in.static.mesh(i)(j)(k).outRegsSel.west.poke(configurationData.static.mesh(i)(j)(k).outRegsSel.west.U)
               dut.io.in.static.mesh(i)(j)(k).outRegsSel.east.poke(configurationData.static.mesh(i)(j)(k).outRegsSel.east.U)
 
+              dut.io.in.static.mesh(i)(j)(k).outRegsEn.north.poke(configurationData.static.mesh(i)(j)(k).outRegsEn.north.B)
+              dut.io.in.static.mesh(i)(j)(k).outRegsEn.south.poke(configurationData.static.mesh(i)(j)(k).outRegsEn.south.B)
+              dut.io.in.static.mesh(i)(j)(k).outRegsEn.west.poke(configurationData.static.mesh(i)(j)(k).outRegsEn.west.B)
+              dut.io.in.static.mesh(i)(j)(k).outRegsEn.east.poke(configurationData.static.mesh(i)(j)(k).outRegsEn.east.B)
+
               assert(configurationData.static.mesh(i)(j)(k).rfWritePortsSel.ports.length == params.rfWritePorts)
               for (l <- 0 until params.rfWritePorts) {
                 dut.io.in.static.mesh(i)(j)(k).rfWritePortsSel.ports(l).poke(configurationData.static.mesh(i)(j)(k).rfWritePortsSel.ports(l).U)
@@ -189,7 +193,6 @@ class BitstreamAssember[T <: Data](configurationFile: String, params: BubbleteaP
           dut.io.in.streamingEngineInstructions(i).compressedInstruction.loadStoreOrMod
           .poke(configurationData.streamingEngineInstructions(i).loadStoreOrMod.B)
 
-          println(configurationData.streamingEngineInstructions(i).dimOffsetOrModSize)
           dut.io.in.streamingEngineInstructions(i).compressedInstruction.dimOffsetOrModSize
           .poke(configurationData.streamingEngineInstructions(i).dimOffsetOrModSize.U)
 
@@ -216,15 +219,21 @@ class BitstreamAssember[T <: Data](configurationFile: String, params: BubbleteaP
       println("Bitstream:")
       bitstream.map(x => f"0x$x%02X ").grouped(16).foreach(x => println(x.mkString))
 
-      val out = new FileOutputStream("test_bitstream.bin")
+      val filenameNoExtension = configurationFile.stripSuffix(".json")
+      val out = new FileOutputStream(filenameNoExtension ++ ".bin")
       out.write(bitstream)
       out.close()
+
+      val cArray = toCArray(bitstream, socParams.cacheLineBytes, filenameNoExtension ++ "_bitstream")
+      val outC = new FileWriter(filenameNoExtension ++ "_bitstream.h")
+      outC.write(cArray)
+      outC.close()
     }
   }
 }
 
 object BitstreamAssembler extends App {
-  val configurationFile = "load_no_store.json"
+  val configurationFile = "./xbitstreams/load_no_store.json"
   val params = CommonBubbleteaParams.minimalConfig
   val socParams = SocParams(
     cacheLineBytes = 64,
@@ -261,6 +270,7 @@ object JsonTest extends App {
             ProcessingElementConfigData(
               op = FuAdd,
               outRegsSel = OutRegsSrcSelData(0, 0, 0, 0),
+              outRegsEn = OutRegsEnData(false, false, false, false),
               rfWritePortsSel = RfWritePortsSrcSelData(Seq(0, 0)),
               fuSrcSel = FuSrcSelData(0, 0),
               rfWriteAddr = Seq(0, 0),
@@ -270,6 +280,7 @@ object JsonTest extends App {
             ProcessingElementConfigData(
               op = FuAdd,
               outRegsSel = OutRegsSrcSelData(0, 0, 0, 0),
+              outRegsEn = OutRegsEnData(false, false, false, false),
               rfWritePortsSel = RfWritePortsSrcSelData(Seq(0, 0)),
               fuSrcSel = FuSrcSelData(0, 0),
               rfWriteAddr = Seq(0, 0),
@@ -281,6 +292,7 @@ object JsonTest extends App {
             ProcessingElementConfigData(
               op = FuAdd,
               outRegsSel = OutRegsSrcSelData(0, 0, 0, 0),
+              outRegsEn = OutRegsEnData(false, false, false, false),
               rfWritePortsSel = RfWritePortsSrcSelData(Seq(0, 0)),
               fuSrcSel = FuSrcSelData(0, 0),
               rfWriteAddr = Seq(0, 0),
@@ -290,6 +302,7 @@ object JsonTest extends App {
             ProcessingElementConfigData(
               op = FuAdd,
               outRegsSel = OutRegsSrcSelData(0, 0, 0, 0),
+              outRegsEn = OutRegsEnData(false, false, false, false),
               rfWritePortsSel = RfWritePortsSrcSelData(Seq(0, 0)),
               fuSrcSel = FuSrcSelData(0, 0),
               rfWriteAddr = Seq(0, 0),
@@ -303,6 +316,7 @@ object JsonTest extends App {
             ProcessingElementConfigData(
               op = FuAdd,
               outRegsSel = OutRegsSrcSelData(0, 0, 0, 0),
+              outRegsEn = OutRegsEnData(false, false, false, false),
               rfWritePortsSel = RfWritePortsSrcSelData(Seq(0, 0)),
               fuSrcSel = FuSrcSelData(0, 0),
               rfWriteAddr = Seq(0, 0),
@@ -312,6 +326,7 @@ object JsonTest extends App {
             ProcessingElementConfigData(
               op = FuAdd,
               outRegsSel = OutRegsSrcSelData(0, 0, 0, 0),
+              outRegsEn = OutRegsEnData(false, false, false, false),
               rfWritePortsSel = RfWritePortsSrcSelData(Seq(0, 0)),
               fuSrcSel = FuSrcSelData(0, 0),
               rfWriteAddr = Seq(0, 0),
@@ -323,6 +338,7 @@ object JsonTest extends App {
             ProcessingElementConfigData(
               op = FuAdd,
               outRegsSel = OutRegsSrcSelData(0, 0, 0, 0),
+              outRegsEn = OutRegsEnData(false, false, false, false),
               rfWritePortsSel = RfWritePortsSrcSelData(Seq(0, 0)),
               fuSrcSel = FuSrcSelData(0, 0),
               rfWriteAddr = Seq(0, 0),
@@ -332,6 +348,7 @@ object JsonTest extends App {
             ProcessingElementConfigData(
               op = FuAdd,
               outRegsSel = OutRegsSrcSelData(0, 0, 0, 0),
+              outRegsEn = OutRegsEnData(false, false, false, false),
               rfWritePortsSel = RfWritePortsSrcSelData(Seq(0, 0)),
               fuSrcSel = FuSrcSelData(0, 0),
               rfWriteAddr = Seq(0, 0),

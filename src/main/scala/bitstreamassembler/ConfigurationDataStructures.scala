@@ -31,6 +31,13 @@ case class OutRegsSrcSelData(
   east: Int,
 )
 
+case class OutRegsEnData(
+  north: Boolean,
+  south: Boolean,
+  west: Boolean,
+  east: Boolean,
+)
+
 case class RfWritePortsSrcSelData(
   ports: Seq[Int],
 )
@@ -61,6 +68,7 @@ case object FuRes5 extends FuOpData { def toFuSel = FUSel.res5 }
 case class ProcessingElementConfigData(
   op: FuOpData,
   outRegsSel: OutRegsSrcSelData,
+  outRegsEn: OutRegsEnData,
   rfWritePortsSel: RfWritePortsSrcSelData,
   fuSrcSel: FuSrcSelData,
   rfWriteAddr: Seq[Int],
@@ -170,6 +178,8 @@ object ConfigurationData {
       )
     }
   )
+
+  implicit val OutRegsEnDataRw: ReadWriter[OutRegsEnData] = macroRW
   
   def rfWritePortsSrcSelDataIntMatcher(int: Int) = int match {
     case 0 => "result"

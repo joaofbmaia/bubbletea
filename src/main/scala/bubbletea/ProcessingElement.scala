@@ -16,6 +16,13 @@ class OutRegsSrcSelBundle[T <: Data](params: BubbleteaParams[T]) extends Bundle 
   val east = UInt(selWidth.W)
 }
 
+class OutRegsEnBundle extends Bundle {
+  val north = Bool()
+  val south = Bool()
+  val west = Bool()
+  val east = Bool()
+}
+
 class RfWritePortsSrcSelBundle[T <: Data](params: BubbleteaParams[T]) extends Bundle {
   // Allowed Sources: FU output, inputs
   val numSrcs = 1 /*fu output*/ + 4 /*inputs*/
@@ -36,6 +43,7 @@ class FuSrcSelBundle[T <: Data](params: BubbleteaParams[T]) extends Bundle {
 class ProcessingElementConfigBundle[T <: Data](params: BubbleteaParams[T]) extends Bundle {
   val op = FUSel()
   val outRegsSel = new OutRegsSrcSelBundle(params)
+  val outRegsEn = new OutRegsEnBundle
   val rfWritePortsSel = new RfWritePortsSrcSelBundle(params)
   val fuSrcSel = new FuSrcSelBundle(params)
   val rfWriteAddr = Vec(params.rfWritePorts, UInt(log2Ceil(params.rfSize).W))
@@ -65,9 +73,16 @@ class ProcessingElement[T <: Data: Arithmetic](params: BubbleteaParams[T]) exten
 
   val registerFile = Module(new RegisterFile(params.dataType, params.rfSize, params.rfReadPorts, params.rfWritePorts))
 
+  val northOutputRegister = RegEnable(io.out.north, io.fire && io.configuration.outRegsEn.north)
+  val southOutputRegister = RegEnable(io.out.south, io.fire && io.configuration.outRegsEn.south)
+  val westOutputRegister = RegEnable(io.out.west, io.fire && io.configuration.outRegsEn.west)
+  val eastOutputRegister = RegEnable(io.out.east, io.fire && io.configuration.outRegsEn.east)
 
-  val outputRegistersNext = Wire(new ProcessingElementDataBundle(params))
-  val outputRegisters = RegEnable(outputRegistersNext, io.fire)
+  val outputRegisters = Wire(new ProcessingElementDataBundle(params))
+  outputRegisters.north := northOutputRegister
+  outputRegisters.south := southOutputRegister
+  outputRegisters.west := westOutputRegister
+  outputRegisters.east := eastOutputRegister
   
   val dontCareDefault = Wire(params.dataType)
   dontCareDefault := DontCare
@@ -101,10 +116,10 @@ class ProcessingElement[T <: Data: Arithmetic](params: BubbleteaParams[T]) exten
   val outRegsSrcLookup = (Seq(functionalUnit.io.result, io.in.north, io.in.south, io.in.west, io.in.east) ++
     Seq.tabulate(params.rfReadPorts)(i => registerFile.io.readData(i))).zipWithIndex.map { case (x, i) => i.U -> x }
 
-  outputRegistersNext.north := MuxLookup(io.configuration.outRegsSel.north, dontCareDefault)(outRegsSrcLookup)
-  outputRegistersNext.south := MuxLookup(io.configuration.outRegsSel.south, dontCareDefault)(outRegsSrcLookup)
-  outputRegistersNext.west := MuxLookup(io.configuration.outRegsSel.west, dontCareDefault)(outRegsSrcLookup)
-  outputRegistersNext.east := MuxLookup(io.configuration.outRegsSel.east, dontCareDefault)(outRegsSrcLookup)
+  northOutputRegister := MuxLookup(io.configuration.outRegsSel.north, dontCareDefault)(outRegsSrcLookup)
+  southOutputRegister := MuxLookup(io.configuration.outRegsSel.south, dontCareDefault)(outRegsSrcLookup)
+  westOutputRegister := MuxLookup(io.configuration.outRegsSel.west, dontCareDefault)(outRegsSrcLookup)
+  eastOutputRegister := MuxLookup(io.configuration.outRegsSel.east, dontCareDefault)(outRegsSrcLookup)
 
   io.out := outputRegisters
 
