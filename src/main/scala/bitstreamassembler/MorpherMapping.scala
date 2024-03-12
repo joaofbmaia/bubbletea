@@ -4,6 +4,7 @@ import bubbletea._
 import chisel3._
 import upickle.default._
 import com.github.tototoshi.csv._
+import java.io._
 
 
 case class microStreamsId(
@@ -45,25 +46,30 @@ class MorpherMappingParser[T <: Data](params: BubbleteaParams[T], socParams: Soc
 
     // Parse loads and stores
     def microStreamsIdParser(key: String) = {
+      def lsStringToNode(ls: String) = {
+        val lsNodePattern = "(\\d+):".r // Regex to find one or more digits followed by ':'
+        lsNodePattern.findFirstMatchIn(ls).map(_.group(1)).getOrElse("")
+      }
+      
       microStreamsId(
         north = Seq.tabulate(initiationInterval, params.meshColumns) { (t, x) =>
           val sePeName = s"PE_SE_NORTH_X${x+1}|_Y0|-T0"
-          val lu = peMaps(sePeName)(key)(t)
+          val lu = lsStringToNode(peMaps(sePeName)(key)(t))
           lu
         },
         south = Seq.tabulate(initiationInterval, params.meshColumns) { (t, x) =>
           val sePeName = s"PE_SE_SOUTH_X${x+1}|_Y${params.meshRows + 1}|-T0"
-          val lu = peMaps(sePeName)(key)(t)
+          val lu = lsStringToNode(peMaps(sePeName)(key)(t))
           lu
         },
         west = Seq.tabulate(initiationInterval, params.meshRows) { (t, y) =>
           val sePeName = s"PE_SE_WEST_X0|_Y${y+1}|-T0"
-          val lu = peMaps(sePeName)(key)(t)
+          val lu = lsStringToNode(peMaps(sePeName)(key)(t))
           lu
         },
         east = Seq.tabulate(initiationInterval, params.meshRows) { (t, y) =>
           val sePeName = s"PE_SE_EAST_X${params.meshColumns + 1}|_Y${y+1}|-T0"
-          val lu = peMaps(sePeName)(key)(t)
+          val lu = lsStringToNode(peMaps(sePeName)(key)(t))
           lu
         }
       )
@@ -182,7 +188,7 @@ class MorpherMappingParser[T <: Data](params: BubbleteaParams[T], socParams: Soc
       }
     }
    
-    val rfWritePortsSource = Seq.tabulate(params.rfSize)(x => x).map(i => rfWpSelector(i)).filter(_ != "").padTo(params.rfWritePorts, "result") .map(ConfigurationData.rfWritePortsSrcSelDataStringMatcher)
+    val rfWritePortsSource = Seq.tabulate(params.rfSize)(x => x).map(i => rfWpSelector(i)).filter(_ != "").padTo(params.rfWritePorts, "result").map(ConfigurationData.rfWritePortsSrcSelDataStringMatcher)
     val rfWritePorts = Seq.tabulate(params.rfSize)(i => pes(t)(y)(x)(s"R${i}_RO")).zipWithIndex.filter(!_._1.isEmpty()).map(_._2)
     val rfWriteEn = Seq.tabulate(params.rfSize)(i => rfWritePorts.contains(i))
     val rfWritePortsPadded = rfWritePorts.padTo(params.rfWritePorts, 0)
@@ -218,10 +224,52 @@ class MorpherMappingParser[T <: Data](params: BubbleteaParams[T], socParams: Soc
       rfWriteEn = rfWriteEn
     )
   }
+
+  def latency(latencyFile: String) = {
+    val csvFile = CSVReader.open(latencyFile)
+
+    val rawCells = csvFile.all()
+
+    val latency = rawCells.map(x => Map(x.head -> x.last)).flatten.toMap
+    latency
+  }
+
+  def delay(loads: microStreamsId, stores: microStreamsId, latency: Map[String,String], initiationInterval: Int) = {
+    val allStores = stores.north.flatten ++ stores.south.flatten ++ stores.west.flatten ++ stores.east.flatten
+    val maxStoreDelay = allStores.filterNot(_.isEmpty()).map(latency(_).toInt).max / initiationInterval * initiationInterval
+    
+    val delayerConfig = DelayerConfigData(
+      loads = Seq.tabulate(params.maxInitiationInterval) { t =>
+        def delayNode(node: String) = {
+          if (node.isEmpty()) 0 else (latency(node).toInt / initiationInterval * initiationInterval)
+        }
+        DelayerBundleData(
+          north = Seq.tabulate(params.meshColumns)(x => delayNode(loads.north(t)(x))),
+          south = Seq.tabulate(params.meshColumns)(x => delayNode(loads.south(t)(x))),
+          west = Seq.tabulate(params.meshRows)(y => delayNode(loads.west(t)(y))),
+          east = Seq.tabulate(params.meshRows)(y => delayNode(loads.east(t)(y)))
+        )
+      },
+      stores = Seq.tabulate(params.maxInitiationInterval) { t =>
+        def delayNode(node: String) = {
+          if (node.isEmpty()) 0 else (maxStoreDelay - (latency(node).toInt / initiationInterval * initiationInterval))
+        }
+        DelayerBundleData(
+          north = Seq.tabulate(params.meshColumns)(x => delayNode(stores.north(t)(x))),
+          south = Seq.tabulate(params.meshColumns)(x => delayNode(stores.south(t)(x))),
+          west = Seq.tabulate(params.meshRows)(y => delayNode(stores.west(t)(y))),
+          east = Seq.tabulate(params.meshRows)(y => delayNode(stores.east(t)(y)))
+        )
+      }
+    )
+
+    (delayerConfig, maxStoreDelay)
+  }
 }
 
 object MorpherMapping extends App {
   val mappingFile = "mapping.csv"
+  val latencyFile = "latency.txt"
   val params = CommonBubbleteaParams.mini2x2
   val socParams = SocParams(
     cacheLineBytes = 64,
@@ -232,16 +280,58 @@ object MorpherMapping extends App {
   val parser = new MorpherMappingParser(params, socParams)
 
   val (pes, loads, stores) = parser.csv(mappingFile)
-
   val initiationInterval = pes.length
+  val latency = parser.latency(latencyFile)
+
+  // Placeholder
+  val streamingEngine = StreamingEngineStaticConfigurationData(
+    loadStreamsConfigured = Seq.fill(params.maxSimultaneousLoadMacroStreams)(false),
+    storeStreamsConfigured = Seq.fill(params.maxSimultaneousStoreMacroStreams)(false),
+    storeStreamsVecLengthMinusOne = Seq.fill(params.maxSimultaneousStoreMacroStreams)(0)
+  )
+
+  val (delayer, maxStoreDelay) = parser.delay(loads, stores, latency, initiationInterval)
+
+  val streamingStage = StreamingStageStaticConfigurationData(
+    streamingEngine = streamingEngine,
+    initiationIntervalMinusOne = initiationInterval - 1,
+    storeStreamsFixedDelay = maxStoreDelay,
+    // Placeholders
+    loadRemaperSwitchesSetup = Seq.fill(params.maxSimultaneousLoadMacroStreams, params.macroStreamDepth)(RemaperMask(false, 0, Side.North, 0)),
+    storeRemaperSwitchesSetup = Seq.fill(params.maxSimultaneousStoreMacroStreams, params.macroStreamDepth)(RemaperMask(false, 0, Side.North, 0))
+  )
 
   val mesh = Seq.tabulate(initiationInterval, params.meshRows, params.meshColumns) { (t, y, x) =>
-    import ConfigurationData._
-    val json = write(parser.pe(pes, t, y, x), indent = 2)
-    println(json)
-
     parser.pe(pes, t, y, x)
   }
-  
 
+  val static = AcceleratorStaticConfigurationData(
+    streamingStage = streamingStage,
+    mesh = mesh,
+    delayer = delayer
+  )
+
+  val configuration = ConfigurationData(
+    static = static,
+    // Placeholder
+    streamingEngineInstructions = Seq.fill(params.maxConfigurationInstructions)(StreamingEngineCompressedConfigurationChannelData(
+      isValid = false,
+      stream = 0,
+      elementWidth = 0,
+      loadStoreOrMod = false,
+      dimOffsetOrModSize = 0,
+      dimSizeOrModTargetAndModBehaviour = 0,
+      end = false,
+      start = false,
+      dimStrideOrModDisplacement = 0,
+      vectorize = false
+    ))
+  )
+
+  val json = write(configuration, indent = 2)
+  //println(json)
+
+  val fileWriter = new FileWriter("configuration.json")
+  fileWriter.write(json)
+  fileWriter.close()
 }

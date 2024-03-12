@@ -223,7 +223,7 @@ object CommonBubbleteaParams {
     maxInitiationInterval = 4,
     //  not minimal below
     maxSimultaneousLoadMacroStreams = 4,
-    maxSimultaneousStoreMacroStreams = 2,
+    maxSimultaneousStoreMacroStreams = 4, // right now this must be the same as maxSimultaneousLoadMacroStreams
     maxConfigurationInstructions = 16,
     seMaxStreamDims = 4,
     seMaxStreamMods = 3,
@@ -239,8 +239,8 @@ object CommonBubbleteaParams {
     seMaxNumLoadStreams = 4,
     seMaxNumStoreStreams = 4,
     rfSize = 4,
-    rfReadPorts = 2,
-    rfWritePorts = 2,
-    maxMeshLatency = 2
+    rfReadPorts = 4,
+    rfWritePorts = 4,
+    maxMeshLatency = 16
   )
 }
