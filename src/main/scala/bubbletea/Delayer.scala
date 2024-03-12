@@ -18,78 +18,98 @@ class DelayerConfigBundle[T <: Data](params: BubbleteaParams[T]) extends Bundle{
 class Delayer[T <: Data: Arithmetic](params: BubbleteaParams[T]) extends Module {
   val io = IO(new Bundle {
     val fire = Input(Bool())
+    val currentModuloCycle = Input(UInt(log2Ceil(params.maxInitiationInterval).W))
 
     val loadsIn = Input(new MeshData(params))
     val meshLoadsOut = Output(new MeshData(params))
     val meshStoresIn = Input(new MeshData(params))
     val storesOut = Output(new MeshData(params))
 
-    val configuration = Input(new DelayerConfigBundle(params))
+    val configuration = Input(Vec(params.maxInitiationInterval, new DelayerConfigBundle(params)))
   })
 
-  val loadDelaysNorth = Seq.fill(params.meshColumns)(Module(new VariablePipe(params.dataType, params.maxMeshLatency)))
-  val loadDelaysSouth = Seq.fill(params.meshColumns)(Module(new VariablePipe(params.dataType, params.maxMeshLatency)))
-  val loadDelaysWest = Seq.fill(params.meshRows)(Module(new VariablePipe(params.dataType, params.maxMeshLatency)))
-  val loadDelaysEast = Seq.fill(params.meshRows)(Module(new VariablePipe(params.dataType, params.maxMeshLatency)))
+  val loadDelaysNorth = Seq.fill(params.maxInitiationInterval, params.meshColumns)(Module(new VariablePipe(params.dataType, params.maxMeshLatency)))
+  val loadDelaysSouth = Seq.fill(params.maxInitiationInterval, params.meshColumns)(Module(new VariablePipe(params.dataType, params.maxMeshLatency)))
+  val loadDelaysWest = Seq.fill(params.maxInitiationInterval, params.meshRows)(Module(new VariablePipe(params.dataType, params.maxMeshLatency)))
+  val loadDelaysEast = Seq.fill(params.maxInitiationInterval, params.meshRows)(Module(new VariablePipe(params.dataType, params.maxMeshLatency)))
 
-  val storeDelaysNorth = Seq.fill(params.meshColumns)(Module(new VariablePipe(params.dataType, params.maxMeshLatency)))
-  val storeDelaysSouth = Seq.fill(params.meshColumns)(Module(new VariablePipe(params.dataType, params.maxMeshLatency)))
-  val storeDelaysWest = Seq.fill(params.meshRows)(Module(new VariablePipe(params.dataType, params.maxMeshLatency)))
-  val storeDelaysEast = Seq.fill(params.meshRows)(Module(new VariablePipe(params.dataType, params.maxMeshLatency)))
+  val storeDelaysNorth = Seq.fill(params.maxInitiationInterval, params.meshColumns)(Module(new VariablePipe(params.dataType, params.maxMeshLatency)))
+  val storeDelaysSouth = Seq.fill(params.maxInitiationInterval, params.meshColumns)(Module(new VariablePipe(params.dataType, params.maxMeshLatency)))
+  val storeDelaysWest = Seq.fill(params.maxInitiationInterval, params.meshRows)(Module(new VariablePipe(params.dataType, params.maxMeshLatency)))
+  val storeDelaysEast = Seq.fill(params.maxInitiationInterval, params.meshRows)(Module(new VariablePipe(params.dataType, params.maxMeshLatency)))
   
-  loadDelaysNorth.zipWithIndex.foreach { case (delay, i) =>
-    delay.io.valid := io.fire
-    delay.io.in := io.loadsIn.north(i)
-    delay.io.latency := io.configuration.loads.north(i)
-    io.meshLoadsOut.north(i) := delay.io.out
-  }
+  io.meshLoadsOut := DontCare
+  io.storesOut := DontCare
 
-  loadDelaysSouth.zipWithIndex.foreach { case (delay, i) =>
-    delay.io.valid := io.fire
-    delay.io.in := io.loadsIn.south(i)
-    delay.io.latency := io.configuration.loads.south(i)
-    io.meshLoadsOut.south(i) := delay.io.out
-  }
+  loadDelaysNorth.zipWithIndex.foreach({ case (delays, i) =>
+    delays.zipWithIndex.foreach({ case (delay, j) =>
+      delay.io.valid := io.fire && io.currentModuloCycle === i.U
+      delay.io.in := io.loadsIn.north(j)
+      delay.io.latency := io.configuration(i).loads.north(j)
+      when(io.currentModuloCycle === i.U) { io.meshLoadsOut.north(j) := delay.io.out }
+    })
+  })
 
-  loadDelaysWest.zipWithIndex.foreach { case (delay, i) =>
-    delay.io.valid := io.fire
-    delay.io.in := io.loadsIn.west(i)
-    delay.io.latency := io.configuration.loads.west(i)
-    io.meshLoadsOut.west(i) := delay.io.out
-  }
+  loadDelaysSouth.zipWithIndex.foreach({ case (delays, i) =>
+    delays.zipWithIndex.foreach({ case (delay, j) =>
+      delay.io.valid := io.fire && io.currentModuloCycle === i.U
+      delay.io.in := io.loadsIn.south(j)
+      delay.io.latency := io.configuration(i).loads.south(j)
+      when(io.currentModuloCycle === i.U) { io.meshLoadsOut.south(j) := delay.io.out }
+    })
+  })
 
-  loadDelaysEast.zipWithIndex.foreach { case (delay, i) =>
-    delay.io.valid := io.fire
-    delay.io.in := io.loadsIn.east(i)
-    delay.io.latency := io.configuration.loads.east(i)
-    io.meshLoadsOut.east(i) := delay.io.out
-  }
+  loadDelaysWest.zipWithIndex.foreach({ case (delays, i) =>
+    delays.zipWithIndex.foreach({ case (delay, j) =>
+      delay.io.valid := io.fire && io.currentModuloCycle === i.U
+      delay.io.in := io.loadsIn.west(j)
+      delay.io.latency := io.configuration(i).loads.west(j)
+      when(io.currentModuloCycle === i.U) { io.meshLoadsOut.west(j) := delay.io.out }
+    })
+  })
 
-  storeDelaysNorth.zipWithIndex.foreach { case (delay, i) =>
-    delay.io.valid := io.fire
-    delay.io.in := io.meshStoresIn.north(i)
-    delay.io.latency := io.configuration.stores.north(i)
-    io.storesOut.north(i) := delay.io.out
-  }
+  loadDelaysEast.zipWithIndex.foreach({ case (delays, i) =>
+    delays.zipWithIndex.foreach({ case (delay, j) =>
+      delay.io.valid := io.fire && io.currentModuloCycle === i.U
+      delay.io.in := io.loadsIn.east(j)
+      delay.io.latency := io.configuration(i).loads.east(j)
+      when(io.currentModuloCycle === i.U) { io.meshLoadsOut.east(j) := delay.io.out }
+    })
+  })
 
-  storeDelaysSouth.zipWithIndex.foreach { case (delay, i) =>
-    delay.io.valid := io.fire
-    delay.io.in := io.meshStoresIn.south(i)
-    delay.io.latency := io.configuration.stores.south(i)
-    io.storesOut.south(i) := delay.io.out
-  }
+  storeDelaysNorth.zipWithIndex.foreach({ case (delays, i) =>
+    delays.zipWithIndex.foreach({ case (delay, j) =>
+      delay.io.valid := io.fire && io.currentModuloCycle === i.U
+      delay.io.in := io.meshStoresIn.north(j)
+      delay.io.latency := io.configuration(i).stores.north(j)
+      when(io.currentModuloCycle === i.U) { io.storesOut.north(j) := delay.io.out }
+    })
+  })
 
-  storeDelaysWest.zipWithIndex.foreach { case (delay, i) =>
-    delay.io.valid := io.fire
-    delay.io.in := io.meshStoresIn.west(i)
-    delay.io.latency := io.configuration.stores.west(i)
-    io.storesOut.west(i) := delay.io.out
-  }
+  storeDelaysSouth.zipWithIndex.foreach({ case (delays, i) =>
+    delays.zipWithIndex.foreach({ case (delay, j) =>
+      delay.io.valid := io.fire && io.currentModuloCycle === i.U
+      delay.io.in := io.meshStoresIn.south(j)
+      delay.io.latency := io.configuration(i).stores.south(j)
+      when(io.currentModuloCycle === i.U) { io.storesOut.south(j) := delay.io.out }
+    })
+  })
 
-  storeDelaysEast.zipWithIndex.foreach { case (delay, i) =>
-    delay.io.valid := io.fire
-    delay.io.in := io.meshStoresIn.east(i)
-    delay.io.latency := io.configuration.stores.east(i)
-    io.storesOut.east(i) := delay.io.out
-  }
+  storeDelaysWest.zipWithIndex.foreach({ case (delays, i) =>
+    delays.zipWithIndex.foreach({ case (delay, j) =>
+      delay.io.valid := io.fire && io.currentModuloCycle === i.U
+      delay.io.in := io.meshStoresIn.west(j)
+      delay.io.latency := io.configuration(i).stores.west(j)
+      when(io.currentModuloCycle === i.U) { io.storesOut.west(j) := delay.io.out }
+    })
+  })
+
+  storeDelaysEast.zipWithIndex.foreach({ case (delays, i) =>
+    delays.zipWithIndex.foreach({ case (delay, j) =>
+      delay.io.valid := io.fire && io.currentModuloCycle === i.U
+      delay.io.in := io.meshStoresIn.east(j)
+      delay.io.latency := io.configuration(i).stores.east(j)
+      when(io.currentModuloCycle === i.U) { io.storesOut.east(j) := delay.io.out }
+    })
+  })
 }

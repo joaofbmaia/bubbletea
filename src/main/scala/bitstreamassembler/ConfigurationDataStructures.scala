@@ -84,8 +84,8 @@ case class DelayerBundleData(
 )
 
 case class DelayerConfigData(
-  loads: DelayerBundleData,
-  stores: DelayerBundleData,
+  loads: Seq[DelayerBundleData],
+  stores: Seq[DelayerBundleData],
 )
 
 case class AcceleratorStaticConfigurationData(

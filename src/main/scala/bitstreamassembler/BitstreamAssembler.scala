@@ -133,45 +133,49 @@ class BitstreamAssember[T <: Data](configurationFile: String, params: BubbleteaP
         }
 
         /* Delayer */
+        assert(configurationData.static.delayer.loads.length == params.maxInitiationInterval)
+        assert(configurationData.static.delayer.stores.length == params.maxInitiationInterval)
 
-        assert(configurationData.static.delayer.loads.north.length == params.meshColumns)
-        for (i <- 0 until params.meshColumns) {
-          dut.io.in.static.delayer.loads.north(i).poke(configurationData.static.delayer.loads.north(i).U)
-        }
+        for (t <- 0 until params.maxInitiationInterval) {
+            assert(configurationData.static.delayer.loads(t).north.length == params.meshColumns)
+            for (i <- 0 until params.meshColumns) {
+              dut.io.in.static.delayer(t).loads.north(i).poke(configurationData.static.delayer.loads(t).north(i).U)
+            }
 
-        assert(configurationData.static.delayer.loads.south.length == params.meshColumns)
-        for (i <- 0 until params.meshColumns) {
-          dut.io.in.static.delayer.loads.south(i).poke(configurationData.static.delayer.loads.south(i).U)
-        }
+            assert(configurationData.static.delayer.loads(t).south.length == params.meshColumns)
+            for (i <- 0 until params.meshColumns) {
+              dut.io.in.static.delayer(t).loads.south(i).poke(configurationData.static.delayer.loads(t).south(i).U)
+            }
 
-        assert(configurationData.static.delayer.loads.west.length == params.meshRows)
-        for (i <- 0 until params.meshRows) {
-          dut.io.in.static.delayer.loads.west(i).poke(configurationData.static.delayer.loads.west(i).U)
-        }
+            assert(configurationData.static.delayer.loads(t).west.length == params.meshRows)
+            for (i <- 0 until params.meshRows) {
+              dut.io.in.static.delayer(t).loads.west(i).poke(configurationData.static.delayer.loads(t).west(i).U)
+            }
 
-        assert(configurationData.static.delayer.loads.east.length == params.meshRows)
-        for (i <- 0 until params.meshRows) {
-          dut.io.in.static.delayer.loads.east(i).poke(configurationData.static.delayer.loads.east(i).U)
-        }
+            assert(configurationData.static.delayer.loads(t).east.length == params.meshRows)
+            for (i <- 0 until params.meshRows) {
+              dut.io.in.static.delayer(t).loads.east(i).poke(configurationData.static.delayer.loads(t).east(i).U)
+            }
 
-        assert(configurationData.static.delayer.stores.north.length == params.meshColumns)
-        for (i <- 0 until params.meshColumns) {
-          dut.io.in.static.delayer.stores.north(i).poke(configurationData.static.delayer.stores.north(i).U)
-        }
+            assert(configurationData.static.delayer.stores(t).north.length == params.meshColumns)
+            for (i <- 0 until params.meshColumns) {
+              dut.io.in.static.delayer(t).stores.north(i).poke(configurationData.static.delayer.stores(t).north(i).U)
+            }
 
-        assert(configurationData.static.delayer.stores.south.length == params.meshColumns)
-        for (i <- 0 until params.meshColumns) {
-          dut.io.in.static.delayer.stores.south(i).poke(configurationData.static.delayer.stores.south(i).U)
-        }
+            assert(configurationData.static.delayer.stores(t).south.length == params.meshColumns)
+            for (i <- 0 until params.meshColumns) {
+              dut.io.in.static.delayer(t).stores.south(i).poke(configurationData.static.delayer.stores(t).south(i).U)
+            }
 
-        assert(configurationData.static.delayer.stores.west.length == params.meshRows)
-        for (i <- 0 until params.meshRows) {
-          dut.io.in.static.delayer.stores.west(i).poke(configurationData.static.delayer.stores.west(i).U)
-        }
+            assert(configurationData.static.delayer.stores(t).west.length == params.meshRows)
+            for (i <- 0 until params.meshRows) {
+              dut.io.in.static.delayer(t).stores.west(i).poke(configurationData.static.delayer.stores(t).west(i).U)
+            }
 
-        assert(configurationData.static.delayer.stores.east.length == params.meshRows)
-        for (i <- 0 until params.meshRows) {
-          dut.io.in.static.delayer.stores.east(i).poke(configurationData.static.delayer.stores.east(i).U)
+            assert(configurationData.static.delayer.stores(t).east.length == params.meshRows)
+            for (i <- 0 until params.meshRows) {
+              dut.io.in.static.delayer(t).stores.east(i).poke(configurationData.static.delayer.stores(t).east(i).U)
+            }
         }
 
         /* Streaming Engine Instructions */
@@ -234,7 +238,7 @@ class BitstreamAssember[T <: Data](configurationFile: String, params: BubbleteaP
 
 object BitstreamAssembler extends App {
   val configurationFile = "./xbitstreams/load_no_store.json"
-  val params = CommonBubbleteaParams.minimalConfig
+  val params = CommonBubbleteaParams.mini2x2
   val socParams = SocParams(
     cacheLineBytes = 64,
     frontBusAddressBits = 32,
@@ -359,18 +363,18 @@ object JsonTest extends App {
         )
       ),
       delayer = DelayerConfigData(
-        loads = DelayerBundleData(
+        loads = Seq.fill(2)(DelayerBundleData(
           north = Seq(0, 0),
           south = Seq(0, 0),
           west = Seq(0, 0),
           east = Seq(0, 0)
-        ),
-        stores = DelayerBundleData(
+        )),
+        stores = Seq.fill(2)(DelayerBundleData(
           north = Seq(0, 0),
           south = Seq(0, 0),
           west = Seq(0, 0),
           east = Seq(0, 0)
-        )
+        ))
       )
     ),
     streamingEngineInstructions = Seq(

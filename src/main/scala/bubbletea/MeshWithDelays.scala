@@ -13,7 +13,7 @@ class MeshWithDelays[T <: Data: Arithmetic](params: BubbleteaParams[T]) extends 
     val out = Output(new MeshData(params))
 
     val meshConfiguration = Input(Vec(params.maxInitiationInterval, Vec(params.meshRows, Vec(params.meshColumns, new ProcessingElementConfigBundle(params)))))
-    val delayerConfiguration = Input(new DelayerConfigBundle(params))
+    val delayerConfiguration = Input(Vec(params.maxInitiationInterval, new DelayerConfigBundle(params)))
   })
 
   val mesh = Module(new Mesh(params))
@@ -25,6 +25,7 @@ class MeshWithDelays[T <: Data: Arithmetic](params: BubbleteaParams[T]) extends 
   mesh.io.configuration := io.meshConfiguration
 
   delayer.io.fire := io.fire
+  delayer.io.currentModuloCycle := io.currentModuloCycle
   delayer.io.configuration := io.delayerConfiguration
 
   delayer.io.loadsIn := io.in
