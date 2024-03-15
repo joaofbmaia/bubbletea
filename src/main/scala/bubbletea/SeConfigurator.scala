@@ -76,8 +76,12 @@ class SeConfigurator[T <: Data](params: BubbleteaParams[T]) extends Module {
       io.control.done := false.B
 
       when(io.seOutput.fire) {
-        nextAddress := instructionCounter.value + 1.U
-        instructionCounter.inc()
+        when(instructionCounter.value === params.maxConfigurationInstructions.U - 1.U) {
+          state := State.done
+        } .otherwise {
+          nextAddress := instructionCounter.value + 1.U
+          instructionCounter.inc()
+        }
       } .otherwise(
         nextAddress := instructionCounter.value
       )
