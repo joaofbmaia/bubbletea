@@ -228,7 +228,8 @@ class BitstreamAssember[T <: Data](configurationFile: String, params: BubbleteaP
       out.write(bitstream)
       out.close()
 
-      val cArray = toCArray(bitstream, socParams.cacheLineBytes, filenameNoExtension ++ "_bitstream")
+      val filenameNoExtensionNoPath = filenameNoExtension.split("/").last
+      val cArray = toCArray(bitstream, socParams.cacheLineBytes, filenameNoExtensionNoPath ++ "_bitstream")
       val outC = new FileWriter(filenameNoExtension ++ "_bitstream.h")
       outC.write(cArray)
       outC.close()
@@ -237,7 +238,7 @@ class BitstreamAssember[T <: Data](configurationFile: String, params: BubbleteaP
 }
 
 object BitstreamAssembler extends App {
-  val configurationFile = "./xbitstreams/load_no_store.json"
+  val configurationFile = "./xbitstreams/matmul_mini2x2.json"
   val params = CommonBubbleteaParams.mini2x2
   val socParams = SocParams(
     cacheLineBytes = 64,
