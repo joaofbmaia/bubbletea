@@ -236,12 +236,12 @@ class MorpherMappingParser[T <: Data](params: BubbleteaParams[T], socParams: Soc
 
   def delay(loads: microStreamsId, stores: microStreamsId, latency: Map[String,String], initiationInterval: Int) = {
     val allStores = stores.north.flatten ++ stores.south.flatten ++ stores.west.flatten ++ stores.east.flatten
-    val maxStoreDelay = allStores.filterNot(_.isEmpty()).map(latency(_).toInt).max / initiationInterval * initiationInterval
+    val maxStoreDelay = allStores.filterNot(_.isEmpty()).map(latency(_).toInt).max / initiationInterval
     
     val delayerConfig = DelayerConfigData(
       loads = Seq.tabulate(params.maxInitiationInterval) { t =>
         def delayNode(node: String) = {
-          if (node.isEmpty()) 0 else (latency(node).toInt / initiationInterval * initiationInterval)
+          if (node.isEmpty()) 0 else (latency(node).toInt / initiationInterval)
         }
         DelayerBundleData(
           north = Seq.tabulate(params.meshColumns)(x => delayNode(loads.north(t)(x))),
@@ -252,7 +252,7 @@ class MorpherMappingParser[T <: Data](params: BubbleteaParams[T], socParams: Soc
       },
       stores = Seq.tabulate(params.maxInitiationInterval) { t =>
         def delayNode(node: String) = {
-          if (node.isEmpty()) 0 else (maxStoreDelay - (latency(node).toInt / initiationInterval * initiationInterval))
+          if (node.isEmpty()) 0 else (maxStoreDelay - (latency(node).toInt / initiationInterval))
         }
         DelayerBundleData(
           north = Seq.tabulate(params.meshColumns)(x => delayNode(stores.north(t)(x))),

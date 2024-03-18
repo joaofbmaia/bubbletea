@@ -4,10 +4,10 @@ import chisel3._
 import chisel3.util.log2Ceil
 
 class DelayerBundle[T <: Data](params: BubbleteaParams[T]) extends Bundle{
-  val north = Vec(params.meshColumns, UInt(log2Ceil(params.maxMeshLatency + 1).W))
-  val south = Vec(params.meshColumns, UInt(log2Ceil(params.maxMeshLatency + 1).W))
-  val west = Vec(params.meshRows, UInt(log2Ceil(params.maxMeshLatency + 1).W))
-  val east = Vec(params.meshRows, UInt(log2Ceil(params.maxMeshLatency + 1).W))
+  val north = Vec(params.meshColumns, UInt(log2Ceil(params.maxDelayIntervals + 1).W))
+  val south = Vec(params.meshColumns, UInt(log2Ceil(params.maxDelayIntervals + 1).W))
+  val west = Vec(params.meshRows, UInt(log2Ceil(params.maxDelayIntervals + 1).W))
+  val east = Vec(params.meshRows, UInt(log2Ceil(params.maxDelayIntervals + 1).W))
 }
 
 class DelayerConfigBundle[T <: Data](params: BubbleteaParams[T]) extends Bundle{
@@ -28,15 +28,15 @@ class Delayer[T <: Data: Arithmetic](params: BubbleteaParams[T]) extends Module 
     val configuration = Input(Vec(params.maxInitiationInterval, new DelayerConfigBundle(params)))
   })
 
-  val loadDelaysNorth = Seq.fill(params.maxInitiationInterval, params.meshColumns)(Module(new VariablePipe(params.dataType, params.maxMeshLatency)))
-  val loadDelaysSouth = Seq.fill(params.maxInitiationInterval, params.meshColumns)(Module(new VariablePipe(params.dataType, params.maxMeshLatency)))
-  val loadDelaysWest = Seq.fill(params.maxInitiationInterval, params.meshRows)(Module(new VariablePipe(params.dataType, params.maxMeshLatency)))
-  val loadDelaysEast = Seq.fill(params.maxInitiationInterval, params.meshRows)(Module(new VariablePipe(params.dataType, params.maxMeshLatency)))
+  val loadDelaysNorth = Seq.fill(params.maxInitiationInterval, params.meshColumns)(Module(new VariablePipe(params.dataType, params.maxDelayIntervals)))
+  val loadDelaysSouth = Seq.fill(params.maxInitiationInterval, params.meshColumns)(Module(new VariablePipe(params.dataType, params.maxDelayIntervals)))
+  val loadDelaysWest = Seq.fill(params.maxInitiationInterval, params.meshRows)(Module(new VariablePipe(params.dataType, params.maxDelayIntervals)))
+  val loadDelaysEast = Seq.fill(params.maxInitiationInterval, params.meshRows)(Module(new VariablePipe(params.dataType, params.maxDelayIntervals)))
 
-  val storeDelaysNorth = Seq.fill(params.maxInitiationInterval, params.meshColumns)(Module(new VariablePipe(params.dataType, params.maxMeshLatency)))
-  val storeDelaysSouth = Seq.fill(params.maxInitiationInterval, params.meshColumns)(Module(new VariablePipe(params.dataType, params.maxMeshLatency)))
-  val storeDelaysWest = Seq.fill(params.maxInitiationInterval, params.meshRows)(Module(new VariablePipe(params.dataType, params.maxMeshLatency)))
-  val storeDelaysEast = Seq.fill(params.maxInitiationInterval, params.meshRows)(Module(new VariablePipe(params.dataType, params.maxMeshLatency)))
+  val storeDelaysNorth = Seq.fill(params.maxInitiationInterval, params.meshColumns)(Module(new VariablePipe(params.dataType, params.maxDelayIntervals)))
+  val storeDelaysSouth = Seq.fill(params.maxInitiationInterval, params.meshColumns)(Module(new VariablePipe(params.dataType, params.maxDelayIntervals)))
+  val storeDelaysWest = Seq.fill(params.maxInitiationInterval, params.meshRows)(Module(new VariablePipe(params.dataType, params.maxDelayIntervals)))
+  val storeDelaysEast = Seq.fill(params.maxInitiationInterval, params.meshRows)(Module(new VariablePipe(params.dataType, params.maxDelayIntervals)))
   
   io.meshLoadsOut := DontCare
   io.storesOut := DontCare

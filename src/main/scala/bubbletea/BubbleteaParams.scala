@@ -38,7 +38,7 @@ trait BubbleteaParams[T <: Data] {
   val rfReadPorts: Int
   val rfWritePorts: Int
 
-  val maxMeshLatency: Int
+  val maxDelayIntervals: Int
 
 
   val maxLoadMicroStreams: Int = (2 * meshRows + 2 * meshColumns) * maxInitiationInterval
@@ -88,7 +88,7 @@ case class UIntBubbleteaParams(
   rfReadPorts: Int,
   rfWritePorts: Int,
 
-  maxMeshLatency: Int
+  maxDelayIntervals: Int
 ) extends BubbleteaParams[UInt]
 
 case class SIntBubbleteaParams(
@@ -121,7 +121,7 @@ case class SIntBubbleteaParams(
   rfReadPorts: Int,
   rfWritePorts: Int,
 
-  maxMeshLatency: Int
+  maxDelayIntervals: Int
 ) extends BubbleteaParams[SInt]
 
 case class FloatBubbleteaParams(
@@ -154,7 +154,7 @@ case class FloatBubbleteaParams(
   rfReadPorts: Int,
   rfWritePorts: Int,
 
-  maxMeshLatency: Int
+  maxDelayIntervals: Int
 ) extends BubbleteaParams[Float]
 
 object CommonBubbleteaParams {
@@ -183,7 +183,7 @@ object CommonBubbleteaParams {
     rfSize = 2,
     rfReadPorts = 2,
     rfWritePorts = 2,
-    maxMeshLatency = 16
+    maxDelayIntervals = 4
   )
 
   val minimalConfig = UIntBubbleteaParams(
@@ -212,7 +212,7 @@ object CommonBubbleteaParams {
     rfSize = 2,
     rfReadPorts = 2,
     rfWritePorts = 2,
-    maxMeshLatency = 2
+    maxDelayIntervals = 1
   )
 
   val mini2x2 = UIntBubbleteaParams(
@@ -241,6 +241,6 @@ object CommonBubbleteaParams {
     rfSize = 4,
     rfReadPorts = 4,
     rfWritePorts = 4,
-    maxMeshLatency = 16
+    maxDelayIntervals = 4
   )
 }
