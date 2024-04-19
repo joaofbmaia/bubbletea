@@ -5,224 +5,427 @@ import chisel3._
 import upickle.default._
 import com.github.tototoshi.csv._
 import java.io._
+import scala.util.matching.Regex
+import scala.collection.mutable.ArrayBuffer
+import scala.util.control.Breaks._
 
 
 case class microStreamsId(
-  north: Seq[Seq[String]],
-  south: Seq[Seq[String]],
-  west: Seq[Seq[String]],
-  east: Seq[Seq[String]]
+  north: ArrayBuffer[ArrayBuffer[String]],
+  south: ArrayBuffer[ArrayBuffer[String]],
+  west: ArrayBuffer[ArrayBuffer[String]],
+  east: ArrayBuffer[ArrayBuffer[String]]
 )
 
 class MorpherMappingParser[T <: Data](params: BubbleteaParams[T], socParams: SocParams) {
-  def csv(mappingFile: String) = {
-    // Parse CSV file
-    val csvFile = CSVReader.open(mappingFile)
+ 
+  case class DfgOutEdge(id: Int, port: String)
+  case class DfgNode(
+    id: Int,
+    op: String,
+    const: String,
+    inputs: Seq[Int],
+    outputs: Seq[DfgOutEdge],
+    recParents: Seq[Int],
+  )
+  def dfg(dfgFile: String) = {
+    val xmlString = scala.io.Source.fromFile(dfgFile).getLines().drop(2).mkString
+    val correctedXmlString = xmlString.replaceAll("BB=", " BB=").replaceAll("CONST=", " CONST=")
+    val xml = scala.xml.XML.loadString(correctedXmlString)
 
-    val rawCells = csvFile.all()
-    val removeTimestamps = rawCells.map(_.drop(1))
-    val replaceDp0 = removeTimestamps.zipWithIndex.map { case (x, i) => if (i == 2) x.zipWithIndex.map { case (y, j) => if (y == "DP0") removeTimestamps(1)(j) else y } else x }
-
-    val peIndices = replaceDp0(0).zipWithIndex.filter(!_._1.isEmpty()).map(_._2)
-    
-    val peCells = peIndices.zipWithIndex.map { case (x, i) => 
-      val from = x
-      val until = if (i == peIndices.length - 1) replaceDp0(0).length else peIndices(i + 1)
-      replaceDp0.transpose.slice(from, until).transpose.map(_.map(_.replace("---", "")))
-    }
-
-    val peCellsMap = peCells.map(x => Map(x.head.head -> x.drop(2)))
-
-    val peMaps = peCellsMap.map(x => x.map { case (k, v) => (k, v.transpose.map(y => Map(y.head -> y.tail)).flatten.toMap) }).flatten.toMap
-
-    val initiationInterval = peMaps.values.head.values.head.length
-
-    // Parse PEs
-    val pes = Seq.tabulate(initiationInterval, params.meshRows, params.meshColumns) { (t, y, x) =>
-      val peName = s"PE_X${x+1}|_Y${y+1}|-T0"
-      val pe = peMaps(peName).map { case (k, v) => (k, v(t))}
-      pe
-    }
-
-    // Parse loads and stores
-    def microStreamsIdParser(key: String) = {
-      def lsStringToNode(ls: String) = {
-        val lsNodePattern = "(\\d+):".r // Regex to find one or more digits followed by ':'
-        lsNodePattern.findFirstMatchIn(ls).map(_.group(1)).getOrElse("")
-      }
-      
-      microStreamsId(
-        north = Seq.tabulate(initiationInterval, params.meshColumns) { (t, x) =>
-          val sePeName = s"PE_SE_NORTH_X${x+1}|_Y0|-T0"
-          val lu = lsStringToNode(peMaps(sePeName)(key)(t))
-          lu
-        },
-        south = Seq.tabulate(initiationInterval, params.meshColumns) { (t, x) =>
-          val sePeName = s"PE_SE_SOUTH_X${x+1}|_Y${params.meshRows + 1}|-T0"
-          val lu = lsStringToNode(peMaps(sePeName)(key)(t))
-          lu
-        },
-        west = Seq.tabulate(initiationInterval, params.meshRows) { (t, y) =>
-          val sePeName = s"PE_SE_WEST_X0|_Y${y+1}|-T0"
-          val lu = lsStringToNode(peMaps(sePeName)(key)(t))
-          lu
-        },
-        east = Seq.tabulate(initiationInterval, params.meshRows) { (t, y) =>
-          val sePeName = s"PE_SE_EAST_X${params.meshColumns + 1}|_Y${y+1}|-T0"
-          val lu = lsStringToNode(peMaps(sePeName)(key)(t))
-          lu
-        }
+    val nodes = (xml \ "Node").map(n =>
+      DfgNode(
+        (n \@ "idx").toInt,
+        (n \ "OP").text,
+        n \@ "CONST",
+        (n \ "Inputs" \ "Input").map(_ \@ "idx").map(_.toInt),
+        (n \ "Outputs" \ "Output").map(o => DfgOutEdge((o \@ "idx").toInt, o \@ "type")),
+        (n \ "RecParents" \ "RecParent").map(_ \@ "idx").map(_.toInt)
       )
+    )
+    
+    nodes
+  }
+  
+  def nameToXYT(name: String) = {
+    val pattern = new Regex("_X(\\d+)\\|_Y(\\d+)\\|-T(\\d+)")
+
+    pattern.findFirstMatchIn(name) match {
+      case Some(m) =>
+        val x = m.group(1)
+        val y = m.group(2)
+        val t = m.group(3)
+        (x.toInt, y.toInt, t.toInt)
+      case None =>
+        throw new Exception(s"Invalid name format: $name")
     }
-
-    val loads = microStreamsIdParser("LU0")
-    val stores = microStreamsIdParser("SU0")
-
-    (pes, loads, stores)
   }
 
+  def route(routeInfoFile: String, dfg: Seq[DfgNode]) = {
+    val routeInfo = scala.io.Source.fromFile(routeInfoFile).getLines().toSeq
 
-  def pe(pes: Seq[Seq[Seq[Map[String,String]]]], t: Int, y: Int, x: Int) = {
-    val opPattern = ":([^:]+)\\(".r // Regex to find any characters between ':' and '('
-    val fuOp = opPattern.findFirstMatchIn(pes(t)(y)(x)("FU0")) match {
-      case Some(matched) => matched.group(1) match {
-        case "NOP" => FuNop
-        case "ADD" => FuAdd
-        case "SUB" => FuSub
-        case "MUL" => FuMul
-        case "LS" => FuShl
-        case "RS" => FuLshr
-        case "ARS" => FuAshr
-        case "AND" => FuAnd
-        case "OR" => FuOr
-        case "XOR" => FuXor
-      }
-      case None => FuNop
+    def groupLines(lines: Seq[String], startsWith: String) = {
+      lines.foldLeft(Seq.empty[Seq[String]]) { (acc, line) =>
+        if (line.startsWith(startsWith)) {
+          Seq(line) +: acc
+        } else {
+          if (acc.isEmpty) Seq(Seq(line))
+          else (acc.head :+ line) +: acc.tail
+        }
+      }.reverse
     }
-   
-    var rfReadPorts = Seq[Int]()
-    def findSource(dstType: String, node: String, pe: Map[String, String]): String = {
-      val fuNodePattern = "(\\d+):".r // Regex to find one or more digits followed by ':'
-      val fuResultFound = fuNodePattern.findFirstMatchIn(pe("FU0")) match {
-        case Some(matched) => matched.group(1) == node
-        case None => false
+    
+    val x = groupLines(routeInfo, "node")
+
+    case class protoParent(id: Int, route: Seq[String])
+    case class protoNode(id: Int, mappedTo: String, parents: Seq[protoParent])
+
+    def parseProtoParent(parent: Seq[String]) = {
+      val parsed = parent.head.split(":")
+      val id = parsed(1).toInt
+      val route = parent.tail.map(s => s.substring(s.indexOf(".") + 1))//.reverse
+      protoParent(id, route)
+    }
+
+    def parseProtoNode(node: Seq[String]) = {
+      val parsed = node.head.split(",").map(_.split("=").last)
+      val (id, mappedTo) = (parsed(0).toInt, parsed(1))
+      val parents = groupLines(node.tail, "\tparent").map(parseProtoParent)
+      protoNode(id, mappedTo, parents)
+    }
+
+    val protoNodeList = x.map(parseProtoNode)
+
+    val initiationInterval = protoNodeList.map(n => nameToXYT(n.mappedTo)._3).max + 1
+
+    var mesh = ArrayBuffer.fill(params.maxInitiationInterval, params.meshRows, params.meshColumns)(ProcessingElementConfigData(
+      op = FuNop,
+      outRegsSel = OutRegsSrcSelData(0, 0, 0, 0),
+      outRegsEn = OutRegsEnData(false, false, false, false),
+      rfWritePortsSel = RfWritePortsSrcSelData(ArrayBuffer.fill(params.rfWritePorts)(0)),
+      fuSrcSel = FuSrcSelData(0, 0),
+      rfWriteAddr = ArrayBuffer.fill(params.rfWritePorts)(0),
+      rfReadAddr = ArrayBuffer.fill(params.rfReadPorts)(0),
+      rfWriteEn = ArrayBuffer.fill(params.rfWritePorts)(false),
+      immediate = 0
+    ))
+
+    var loads = microStreamsId(
+      north = ArrayBuffer.fill(params.maxInitiationInterval, params.meshColumns)(""),
+      south = ArrayBuffer.fill(params.maxInitiationInterval, params.meshColumns)(""),
+      west = ArrayBuffer.fill(params.maxInitiationInterval, params.meshRows)(""),
+      east = ArrayBuffer.fill(params.maxInitiationInterval, params.meshRows)("")
+    )
+
+    var stores = microStreamsId(
+      north = ArrayBuffer.fill(params.maxInitiationInterval, params.meshColumns)(""),
+      south = ArrayBuffer.fill(params.maxInitiationInterval, params.meshColumns)(""),
+      west = ArrayBuffer.fill(params.maxInitiationInterval, params.meshRows)(""),
+      east = ArrayBuffer.fill(params.maxInitiationInterval, params.meshRows)("")
+    )
+
+    // operand set is used to check if only one operand is set in the FU, so that we can fix that later
+    // fix later for constants and x^2 kinda cases
+    val i1Set = ArrayBuffer.fill(initiationInterval, params.meshRows, params.meshColumns)(false)
+    val i2Set = ArrayBuffer.fill(initiationInterval, params.meshRows, params.meshColumns)(false)
+    val hasConstant = ArrayBuffer.fill(initiationInterval, params.meshRows, params.meshColumns)(false)
+
+    // Set PE ops/immediate values and loads/stores
+    for (node <- protoNodeList) {
+      val dfgNode = dfg.find(_.id == node.id).get
+      if (node.mappedTo.contains("SE")) {
+        // This is a SE node
+        val (x1, y1, t) = nameToXYT(node.mappedTo)
+
+        def microStreamsIdSetter(microStreams: microStreamsId) = {
+          if (node.mappedTo.contains("NORTH")) {
+            microStreams.north(t)(x1 - 1) = dfgNode.id.toString
+          } else if (node.mappedTo.contains("SOUTH")) {
+            microStreams.south(t)(x1 - 1) = dfgNode.id.toString
+          } else if (node.mappedTo.contains("WEST")) {
+            microStreams.west(t)(y1 - 1) = dfgNode.id.toString
+          } else if (node.mappedTo.contains("EAST")) {
+            microStreams.east(t)(y1 - 1) = dfgNode.id.toString
+          } else {
+            throw new Exception(s"Invalid PE_SE node name: ${node.mappedTo}")
+          }
+        }
+        
+        // Fill loads and stores with microstreams IDs
+        dfgNode.op match {
+          case "LOAD" => microStreamsIdSetter(loads)
+          case "STORE" => microStreamsIdSetter(stores)
+        }
+        
+      } else{
+        // This is a PE node
+        val (x1, y1, t) = nameToXYT(node.mappedTo)
+        val x = x1 - 1
+        val y = y1 - 1
+        //println(s"Node ${node.id} mapped at X: $x, Y: $y, T: $t")
+        val fuOp = dfgNode.op match {
+          case "NOP" => FuNop
+          case "ADD" => FuAdd
+          case "SUB" => FuSub
+          case "MUL" => FuMul
+          case "LS" => FuShl
+          case "RS" => FuLshr
+          case "ARS" => FuAshr
+          case "AND" => FuAnd
+          case "OR" => FuOr
+          case "XOR" => FuXor
+        }
+
+        val immediate = dfgNode.const match {
+          case "" => 0
+          case _ => dfgNode.const.toInt
+        }
+
+        // Set ops and immediate values in the mesh
+        mesh(t)(y)(x).op = fuOp
+        mesh(t)(y)(x).immediate = immediate
+
+        hasConstant(t)(y)(x) = true
+      }
+    }
+
+    // Set routes in the mesh (THE MEAT)
+    def setRoute(src: String, dst: String): Unit = {
+      val fuResultPattern = """.+\.FU0\.DP0_T$""".r
+      val fuOperandPattern = """.+\.FU0\.DP0_I(\d+)$""".r
+      val rfWpPattern = """.+\.RF0\.WP(\d+)$""".r
+      val rfRegWritePattern = """.+\.RF0\.R(\d+)_RO$""".r
+      val rfRegReadPattern = """.+\.RF0\.R(\d+)_RI$""".r
+      val rfRpPattern = """.+\.RF0\.RP(\d+)$""".r
+      val inputDirPattern = """.+\.(.+)_I""".r
+      val outputDirPattern = """.+\.(.+)_O""".r
+      val outRegWritePattern = """.+\.(.+)R_RO""".r
+      val outRegReadPattern = """.+\.(.+)R_RI""".r
+      val sePattern = """.*PE_SE.*""".r
+
+      def nodeMatcher(node: String) = node match {
+        case sePattern() => {
+          ("SE", "")
+        }
+        case fuResultPattern() => {
+          ("FU_RESULT", "")
+        }
+        case fuOperandPattern(fuOperand) => {
+          ("FU", fuOperand)
+        }
+        case rfWpPattern(rfWp) => {
+          ("RF_WP", rfWp)
+        }
+        case rfRegWritePattern(rfReg) => {
+          ("RF_REG_WRITE", rfReg)
+        }
+        case rfRegReadPattern(rfReg) => {
+          ("RF_REG_READ", rfReg)
+        }
+        case rfRpPattern(rfRp) => {
+          ("RF_RP", rfRp)
+        }
+        case inputDirPattern(dir) => {
+          ("INPUT", dir)
+        }
+        case outputDirPattern(dir) => {
+          ("OUTPUT", dir)
+        }
+        case outRegWritePattern(reg) => {
+          ("OUT_REG_WRITE", reg)
+        }
+        case outRegReadPattern(reg) => {
+          ("OUT_REG_READ", reg)
+        }
+        case _ => {
+          throw new Exception(s"Unmatched route: $dst")
+        }
       }
 
-      // FU result source only allowed for out regs and RF
-      if (dstType == "OUT_REG" || dstType == "RF") {
-        if(fuResultFound) return "result"
-      }
-      if(pe("NORTH_I") == node) return "north"
-      if(pe("SOUTH_I") == node) return "south"
-      if(pe("WEST_I") == node) return "west"
-      if(pe("EAST_I") == node) return "east"
-      // RF source only allowed for out regs and FU
-      if (dstType == "OUT_REG" || dstType == "FU") {
-        for (i <- 0 until params.rfSize) {
-          if(pe(s"R${i}_RI") == node) {
-            if (rfReadPorts.contains(i)) {
-              return s"rfPort${rfReadPorts.indexOf(i)}"
-            } else {
-              rfReadPorts = rfReadPorts :+ i
-              return s"rfPort${rfReadPorts.length - 1}"
-            }
+
+      val (dstType, dstValue) = nodeMatcher(dst)
+      val (srcType, srcValue) = nodeMatcher(src)
+
+      def outRegSetter(value: String) = {
+        // this is the case where the any valid source is written to an output register
+        // we must set the output register select to the input, and enable the output register
+        assert(nameToXYT(src) == nameToXYT(dst))
+        val (x1, y1, t) = nameToXYT(src)
+        dstValue match {
+          case "N" => {
+            mesh(t)(y1 - 1)(x1 - 1).outRegsSel.north = ConfigurationData.outRegsSrcSelDataStringMatcher(value)
+            mesh(t)(y1 - 1)(x1 - 1).outRegsEn.north = true
+          }
+          case "S" => {
+            mesh(t)(y1 - 1)(x1 - 1).outRegsSel.south = ConfigurationData.outRegsSrcSelDataStringMatcher(value)
+            mesh(t)(y1 - 1)(x1 - 1).outRegsEn.south = true
+          }
+          case "W" => {
+            mesh(t)(y1 - 1)(x1 - 1).outRegsSel.west = ConfigurationData.outRegsSrcSelDataStringMatcher(value)
+            mesh(t)(y1 - 1)(x1 - 1).outRegsEn.west = true
+          }
+          case "E" => {
+            mesh(t)(y1 - 1)(x1 - 1).outRegsSel.east = ConfigurationData.outRegsSrcSelDataStringMatcher(value)
+            mesh(t)(y1 - 1)(x1 - 1).outRegsEn.east = true
+          }
+          case _ => {
+            throw new Exception(s"Unknown direction: $dstValue")
           }
         }
       }
 
-      throw new Exception(s"Source not found for node $node at PE $x, $y, $t")
-      ""
-    }
-
-    var outRegsEnSeq = Seq.fill(4)(false)
-    def outRegSelector(dstReg: String) = {
-      val key = s"${dstReg}_RO"
-      var en = false
-      var ret = ""
-      if (pes(t)(y)(x)(key).isEmpty()) {
-        // default
-        ret = "result"
-      } else if (pes(t)(y)(x)(key) == pes(t)(y)(x)(s"${dstReg}_RI")) {
-        // source is the register itslef from the previous cycle
-        ret = "result"
-      } else {
-        ret = findSource("OUT_REG", pes(t)(y)(x)(key), pes(t)(y)(x))
-        en = true
+      def fuOperandSetter(value: String) = {
+        assert(nameToXYT(src) == nameToXYT(dst))
+        val (x1, y1, t) = nameToXYT(src)
+        dstValue match {
+          case "1" => {
+            mesh(t)(y1 - 1)(x1 - 1).fuSrcSel.a = ConfigurationData.fuSrcSelDataStringMatcher(value)
+            i1Set(t)(y1 - 1)(x1 - 1) = true
+          }
+          case "2" => {
+            mesh(t)(y1 - 1)(x1 - 1).fuSrcSel.b = ConfigurationData.fuSrcSelDataStringMatcher(value)
+            i2Set(t)(y1 - 1)(x1 - 1) = true
+          }
+          case _ => {
+            throw new Exception(s"Unknown operand: $dstValue")
+          }
+        }
       }
-      outRegsEnSeq = outRegsEnSeq.updated(dstReg match {
-        case "NR" => 0
-        case "SR" => 1
-        case "WR" => 2
-        case "ER" => 3
-      }, en)
-      ret
-    }
 
-    def rfWpSelector(dstReg: Int) = {
-      val key = s"R${dstReg}_RO"
-      if (pes(t)(y)(x)(key).isEmpty()) {
-        // default
-        ""
-      } else if (pes(t)(y)(x)(key) == pes(t)(y)(x)(s"R${dstReg}_RI")) {
-        // source is the register itslef from the previous cycle
-        ""
-      } else {
-        findSource("RF", pes(t)(y)(x)(key), pes(t)(y)(x))
+      def rfWpSetter(value: String) = {
+        assert(nameToXYT(src) == nameToXYT(dst))
+        val (x1, y1, t) = nameToXYT(src)
+        mesh(t)(y1 - 1)(x1 - 1).rfWritePortsSel.ports(dstValue.toInt) = ConfigurationData.rfWritePortsSrcSelDataStringMatcher(value)
       }
+
+      if (false) {}
+      else if (srcType == "SE") {
+        // do nothing for SEs
+      }
+      else if (dstType == "INPUT") {
+        // nothing to do here
+      }
+      else if (dstType == "OUT_REG_WRITE" && srcType == "INPUT") {
+        outRegSetter(srcValue.toLowerCase())
+      }
+      else if (dstType == "OUT_REG_WRITE" && srcType == "FU_RESULT") {
+        outRegSetter("result")
+      }
+      else if (dstType == "OUT_REG_WRITE" && srcType == "RF_RP") {
+        outRegSetter(s"rfPort${srcValue}")
+      }
+      else if (dstType == "OUT_REG_WRITE" && srcType == "OUT_REG_READ") {
+        // this is simply the case where the data stays in the output register
+        // keep enable at false (default)
+      }
+      else if (dstType == "OUT_REG_READ" && srcType == "OUT_REG_WRITE") {
+        // this is a register connection in time
+        assert(nameToXYT(src)._1 == nameToXYT(dst)._1)
+        assert(nameToXYT(src)._2 == nameToXYT(dst)._2)
+        assert((nameToXYT(src)._3.toInt + 1) % initiationInterval == nameToXYT(dst)._3.toInt)
+        // do nothing
+      }
+      else if (dstType == "OUTPUT" && srcType == "OUT_REG_READ") {
+        // connection from output register to output
+        assert(srcValue == dstValue.head.toString())
+        // do nothing
+      }
+      else if (dstType == "FU" && srcType == "INPUT") {
+        fuOperandSetter(srcValue.toLowerCase())
+      }
+      else if (dstType == "FU" && srcType == "RF_RP") {
+        fuOperandSetter(s"rfPort${srcValue}")
+      }
+      else if (dstType == "RF_WP" && srcType == "INPUT") {
+        rfWpSetter(srcValue.toLowerCase())
+      }
+      else if (dstType == "RF_WP" && srcType == "FU_RESULT") {
+        rfWpSetter("result")
+      }
+      else if (dstType == "RF_REG_WRITE" && srcType == "RF_WP") {
+        // this is the case where the data is written to a register
+        // we must set the register write address to the write port, and enable the write port
+        assert(nameToXYT(src) == nameToXYT(dst))
+        val (x1, y1, t) = nameToXYT(src)
+        mesh(t)(y1 - 1)(x1 - 1).rfWriteAddr(srcValue.toInt) = dstValue.toInt
+        mesh(t)(y1 - 1)(x1 - 1).rfWriteEn(srcValue.toInt) = true
+      }
+      else if (dstType == "RF_REG_WRITE" && srcType == "RF_REG_READ") {
+        // this is simply the case where the data stays in the register
+      }
+      else if (dstType == "RF_REG_READ" && srcType == "RF_REG_WRITE") {
+        // this is a register connection in time
+        assert(nameToXYT(src)._1 == nameToXYT(dst)._1)
+        assert(nameToXYT(src)._2 == nameToXYT(dst)._2)
+        assert((nameToXYT(src)._3.toInt + 1) % initiationInterval == nameToXYT(dst)._3.toInt)
+        // do nothing
+      }
+      else if (dstType == "RF_RP" && srcType == "RF_REG_READ") {
+        // this is the case where the data is read from a register
+        // we must set the register read address to the read port
+        assert(nameToXYT(src) == nameToXYT(dst))
+        val (x1, y1, t) = nameToXYT(src)
+        mesh(t)(y1 - 1)(x1 - 1).rfReadAddr(dstValue.toInt) = srcValue.toInt
+      }
+      else if (dstType == "SE" && srcType == "OUTPUT") {
+        // do nothing for SEs
+      }
+      else {
+        throw new Exception(s"Unknown route type: $srcType -> $dstType")
+      }
+      
+      //println(s"$srcType($srcValue) -> $dstType($dstValue)")
     }
 
-    def fuSrcSelector(operand: String) = { 
-      if (pes(t)(y)(x)("FU0").isEmpty()) {
-        // default
-        "north"
-      } else {
-        val aOperandNodePattern = "\\((\\d+)-".r // Regex to find one or more digits between '(' and '-'
-        val bOperandNodePattern = "-(\\d+)-\\|".r // Regex to find one or more digits between '-' and '-|'
-        val aNode = aOperandNodePattern.findFirstMatchIn(pes(t)(y)(x)("FU0")).get.group(1)
-        val bNode = bOperandNodePattern.findFirstMatchIn(pes(t)(y)(x)("FU0")).get.group(1)
-        if (operand == "a") {
-          findSource("FU", aNode, pes(t)(y)(x))
-        } else {
-          findSource("FU", bNode, pes(t)(y)(x))
+
+    // Clean the protoNodeList of redundant route nodes
+    val cleanProtoNodeList = protoNodeList.map(n => n.copy(parents = n.parents.map(p => p.copy(route = p.route.filterNot(r => {
+      val dpOperandPattern = """.+\.FU0\.DP0\.I(\d+)$""".r
+      val dummyWpPattern = """.+T\d+\.WP(\d+)$""".r
+      val dummyDpPattern = """.+T\d+\.DP0_I(\d+)$""".r
+        r match {
+          case dpOperandPattern(_) => true
+          case dummyWpPattern(_) => true
+          case dummyDpPattern(_) => true
+          case _ => false
+        }  
+      })))))
+
+    
+    // Set routes in the mesh
+    for (node <- cleanProtoNodeList) {
+      for (parent <- node.parents) {
+        for (r <- 1 until parent.route.length) {
+          val src = parent.route(r - 1)
+          val dst = parent.route(r)
+          setRoute(src, dst)
         }
       }
     }
-   
-    val rfWritePortsSource = Seq.tabulate(params.rfSize)(x => x).map(i => rfWpSelector(i)).filter(_ != "").padTo(params.rfWritePorts, "result").map(ConfigurationData.rfWritePortsSrcSelDataStringMatcher)
-    val rfWritePorts = Seq.tabulate(params.rfSize)(i => pes(t)(y)(x)(s"R${i}_RO")).zipWithIndex.filter(!_._1.isEmpty()).map(_._2)
-    val rfWriteEn = Seq.tabulate(params.rfSize)(i => rfWritePorts.contains(i))
-    val rfWritePortsPadded = rfWritePorts.padTo(params.rfWritePorts, 0)
 
-    val outRegsSel = OutRegsSrcSelData(
-      north = ConfigurationData.outRegsSrcSelDataStringMatcher(outRegSelector("NR")),
-      south = ConfigurationData.outRegsSrcSelDataStringMatcher(outRegSelector("SR")),
-      west = ConfigurationData.outRegsSrcSelDataStringMatcher(outRegSelector("WR")),
-      east = ConfigurationData.outRegsSrcSelDataStringMatcher(outRegSelector("ER"))
-    )
+    // Fix for constants and x^2 kinda cases
+    for (t <- 0 until initiationInterval) {
+      for (y <- 0 until params.meshRows) {
+        for (x <- 0 until params.meshColumns) {
+          // handle the immediate values
+          if (hasConstant(t)(y)(x) && i1Set(t)(y)(x)) {
+            mesh(t)(y)(x).fuSrcSel.b = ConfigurationData.fuSrcSelDataStringMatcher("immediate")
+          }
+          else if (hasConstant(t)(y)(x) && i2Set(t)(y)(x)) {
+            mesh(t)(y)(x).fuSrcSel.a = ConfigurationData.fuSrcSelDataStringMatcher("immediate")
+          }
+          // handle x^2 kinda cases
+          else if (i1Set(t)(y)(x) && !i2Set(t)(y)(x)) {
+            mesh(t)(y)(x).fuSrcSel.b = mesh(t)(y)(x).fuSrcSel.a
+          }
+          else if (i2Set(t)(y)(x) && !i1Set(t)(y)(x)) {
+            mesh(t)(y)(x).fuSrcSel.a = mesh(t)(y)(x).fuSrcSel.b
+          }
+        }
+      }
+    }
 
-    val outRegsEn = OutRegsEnData(outRegsEnSeq(0), outRegsEnSeq(1), outRegsEnSeq(2), outRegsEnSeq(3))
-
-    val rfWritePortsSel = RfWritePortsSrcSelData(
-      ports = rfWritePortsSource
-    )
-
-    val fuSrcSel = FuSrcSelData(
-      a = ConfigurationData.fuSrcSelDataStringMatcher(fuSrcSelector("a")),
-      b = ConfigurationData.fuSrcSelDataStringMatcher(fuSrcSelector("b"))
-    )
-
-    val rfReadPortsPadded = rfReadPorts.padTo(params.rfReadPorts, 0)
-
-    ProcessingElementConfigData(
-      op = fuOp,
-      outRegsSel = outRegsSel,
-      outRegsEn = outRegsEn,
-      rfWritePortsSel = rfWritePortsSel,
-      fuSrcSel = fuSrcSel,
-      rfWriteAddr = rfWritePortsPadded,
-      rfReadAddr = rfReadPortsPadded,
-      rfWriteEn = rfWriteEn
-    )
+    (mesh, loads, stores, initiationInterval)
   }
 
   def latency(latencyFile: String) = {
@@ -268,8 +471,8 @@ class MorpherMappingParser[T <: Data](params: BubbleteaParams[T], socParams: Soc
 }
 
 object MorpherMapping extends App {
-  val mappingFile = "mapping.csv"
   val latencyFile = "latency.txt"
+  val routeInfoFile = "routeInfo.log"
   val params = CommonBubbleteaParams.mini2x2
   val socParams = SocParams(
     cacheLineBytes = 64,
@@ -279,9 +482,10 @@ object MorpherMapping extends App {
   )
   val parser = new MorpherMappingParser(params, socParams)
 
-  val (pes, loads, stores) = parser.csv(mappingFile)
-  val initiationInterval = pes.length
+  val dfg = parser.dfg("dfg.xml")
+  val (mesh, loads, stores, initiationInterval) = parser.route(routeInfoFile, dfg)
   val latency = parser.latency(latencyFile)
+  val (delayer, maxStoreDelay) = parser.delay(loads, stores, latency, initiationInterval)
 
   // Placeholder
   val streamingEngine = StreamingEngineStaticConfigurationData(
@@ -289,8 +493,6 @@ object MorpherMapping extends App {
     storeStreamsConfigured = Seq.fill(params.maxSimultaneousStoreMacroStreams)(false),
     storeStreamsVecLengthMinusOne = Seq.fill(params.maxSimultaneousStoreMacroStreams)(0)
   )
-
-  val (delayer, maxStoreDelay) = parser.delay(loads, stores, latency, initiationInterval)
 
   val streamingStage = StreamingStageStaticConfigurationData(
     streamingEngine = streamingEngine,
@@ -301,13 +503,9 @@ object MorpherMapping extends App {
     storeRemaperSwitchesSetup = Seq.fill(params.maxSimultaneousStoreMacroStreams, params.macroStreamDepth)(RemaperMask(false, 0, Side.North, 0))
   )
 
-  val mesh = Seq.tabulate(initiationInterval, params.meshRows, params.meshColumns) { (t, y, x) =>
-    parser.pe(pes, t, y, x)
-  }
-
   val static = AcceleratorStaticConfigurationData(
     streamingStage = streamingStage,
-    mesh = mesh,
+    mesh = mesh.map(_.map(_.toSeq).toSeq).toSeq,
     delayer = delayer
   )
 
@@ -334,4 +532,6 @@ object MorpherMapping extends App {
   val fileWriter = new FileWriter("configuration.json")
   fileWriter.write(json)
   fileWriter.close()
+  
+  println("Configuration file generated successfully")
 }

@@ -33,7 +33,7 @@ class RfWritePortsSrcSelBundle[T <: Data](params: BubbleteaParams[T]) extends Bu
 
 class FuSrcSelBundle[T <: Data](params: BubbleteaParams[T]) extends Bundle {
   // Allowed Sources: inputs, RF
-  val numSrcs = 4 /*inputs*/ + params.rfReadPorts
+  val numSrcs = 1 /*immediate*/ + 4 /*inputs*/ + params.rfReadPorts
   val selWidth = log2Ceil(numSrcs)
 
   val a = UInt(selWidth.W)
@@ -49,6 +49,7 @@ class ProcessingElementConfigBundle[T <: Data](params: BubbleteaParams[T]) exten
   val rfWriteAddr = Vec(params.rfWritePorts, UInt(log2Ceil(params.rfSize).W))
   val rfReadAddr = Vec(params.rfReadPorts, UInt(log2Ceil(params.rfSize).W))
   val rfWriteEn = Vec(params.rfWritePorts, Bool())
+  val immediate = Output(params.dataType)
 }
 
 class ProcessingElementDataBundle[T <: Data](params: BubbleteaParams[T]) extends Bundle {
@@ -88,7 +89,7 @@ class ProcessingElement[T <: Data: Arithmetic](params: BubbleteaParams[T]) exten
   dontCareDefault := DontCare
 
   // Connect FU
-  val fuSrcLookup = (Seq(io.in.north, io.in.south, io.in.west, io.in.east) ++
+  val fuSrcLookup = (Seq(io.configuration.immediate, io.in.north, io.in.south, io.in.west, io.in.east) ++
     Seq.tabulate(params.rfReadPorts)(i => registerFile.io.readData(i))).zipWithIndex.map { case (x, i) => i.U -> x }
 
   functionalUnit.io.a := MuxLookup(io.configuration.fuSrcSel.a, dontCareDefault)(fuSrcLookup)

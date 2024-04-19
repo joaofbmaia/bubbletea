@@ -2,6 +2,7 @@ package bitstreamassembler
 
 import bubbletea._
 import upickle.default._
+import scala.collection.mutable.ArrayBuffer
 
 case class StreamingEngineStaticConfigurationData(
   loadStreamsConfigured: Seq[Boolean],
@@ -25,26 +26,26 @@ case class StreamingStageStaticConfigurationData(
 )
 
 case class OutRegsSrcSelData(
-  north: Int,
-  south: Int,
-  west: Int,
-  east: Int,
+  var north: Int,
+  var south: Int,
+  var west: Int,
+  var east: Int,
 )
 
 case class OutRegsEnData(
-  north: Boolean,
-  south: Boolean,
-  west: Boolean,
-  east: Boolean,
+  var north: Boolean,
+  var south: Boolean,
+  var west: Boolean,
+  var east: Boolean,
 )
 
 case class RfWritePortsSrcSelData(
-  ports: Seq[Int],
+  ports: ArrayBuffer[Int],
 )
 
 case class FuSrcSelData(
-  a: Int,
-  b: Int,
+  var a: Int,
+  var b: Int,
 )
 
 sealed trait FuOpData { def toFuSel: FUSel.Type }
@@ -66,14 +67,15 @@ case object FuRes4 extends FuOpData { def toFuSel = FUSel.res4 }
 case object FuRes5 extends FuOpData { def toFuSel = FUSel.res5 }
 
 case class ProcessingElementConfigData(
-  op: FuOpData,
+  var op: FuOpData,
   outRegsSel: OutRegsSrcSelData,
   outRegsEn: OutRegsEnData,
   rfWritePortsSel: RfWritePortsSrcSelData,
   fuSrcSel: FuSrcSelData,
-  rfWriteAddr: Seq[Int],
-  rfReadAddr: Seq[Int],
-  rfWriteEn: Seq[Boolean],
+  rfWriteAddr: ArrayBuffer[Int],
+  rfReadAddr: ArrayBuffer[Int],
+  rfWriteEn: ArrayBuffer[Boolean],
+  var immediate: BigInt,
 )
 
 case class DelayerBundleData(
@@ -202,24 +204,26 @@ object ConfigurationData {
     json => {
       val obj = json.obj
       RfWritePortsSrcSelData(
-        obj("ports").arr.map(_.str).map(rfWritePortsSrcSelDataStringMatcher).toSeq
+        obj("ports").arr.map(_.str).map(rfWritePortsSrcSelDataStringMatcher)
       )
     }
   )
   
   def fuSrcSelDataIntMatcher(int: Int) = int match {
-    case 0 => "north"
-    case 1 => "south"
-    case 2 => "west"
-    case 3 => "east"
-    case x if x >= 4 => s"rfPort${x - 4}"
+    case 0 => "immediate"
+    case 1 => "north"
+    case 2 => "south"
+    case 3 => "west"
+    case 4 => "east"
+    case x if x >= 5 => s"rfPort${x - 5}"
   }
   def fuSrcSelDataStringMatcher(str: String) = str match {
-    case "north" => 0
-    case "south" => 1
-    case "west" => 2
-    case "east" => 3
-    case x if x.startsWith("rfPort") => x.drop(6).toInt + 4
+    case "immediate" => 0
+    case "north" => 1
+    case "south" => 2
+    case "west" => 3
+    case "east" => 4
+    case x if x.startsWith("rfPort") => x.drop(6).toInt + 5
   }
   implicit val fuSrcSelDataRw: ReadWriter[FuSrcSelData] = readwriter[ujson.Value].bimap[FuSrcSelData](
     x => ujson.Obj(
