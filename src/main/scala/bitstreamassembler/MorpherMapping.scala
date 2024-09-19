@@ -470,49 +470,105 @@ class MorpherMappingParser[T <: Data](params: BubbleteaParams[T], socParams: Soc
   }
 }
 
-object MorpherMapping extends App {
-  val latencyFile = "latency.txt"
-  val routeInfoFile = "routeInfo.log"
-  val params = CommonBubbleteaParams.mini2x2
-  val socParams = SocParams(
-    cacheLineBytes = 64,
-    frontBusAddressBits = 32,
-    frontBusDataBits = 64,
-    xLen = 64
-  )
-  val parser = new MorpherMappingParser(params, socParams)
+class StreamsConfigurationGenerator[T <: Data](params: BubbleteaParams[T], socParams: SocParams) {
+  def streams(streamsFile: String, loads: microStreamsId, stores: microStreamsId) = {
+    val streamsJson = scala.io.Source.fromFile(streamsFile).getLines().mkString
+    val streamData = read[StreamsData](streamsJson)
 
-  val dfg = parser.dfg("dfg.xml")
-  val (mesh, loads, stores, initiationInterval) = parser.route(routeInfoFile, dfg)
-  val latency = parser.latency(latencyFile)
-  val (delayer, maxStoreDelay) = parser.delay(loads, stores, latency, initiationInterval)
+    val numLoadStreams = streamData.loads.size
+    val loadStreamsConfigured = Seq.fill(numLoadStreams)(true) ++ Seq.fill(params.maxSimultaneousLoadMacroStreams - numLoadStreams)(false)
 
-  // Placeholder
-  val streamingEngine = StreamingEngineStaticConfigurationData(
-    loadStreamsConfigured = Seq.fill(params.maxSimultaneousLoadMacroStreams)(false),
-    storeStreamsConfigured = Seq.fill(params.maxSimultaneousStoreMacroStreams)(false),
-    storeStreamsVecLengthMinusOne = Seq.fill(params.maxSimultaneousStoreMacroStreams)(0)
-  )
+    val numStoreStreams = streamData.stores.size
+    val storeStreamsConfigured = Seq.fill(numStoreStreams)(true) ++ Seq.fill(params.maxSimultaneousStoreMacroStreams - numStoreStreams)(false)
 
-  val streamingStage = StreamingStageStaticConfigurationData(
-    streamingEngine = streamingEngine,
-    initiationIntervalMinusOne = initiationInterval - 1,
-    storeStreamsFixedDelay = maxStoreDelay,
-    // Placeholders
-    loadRemaperSwitchesSetup = Seq.fill(params.maxSimultaneousLoadMacroStreams, params.macroStreamDepth)(RemaperMask(false, 0, Side.North, 0)),
-    storeRemaperSwitchesSetup = Seq.fill(params.maxSimultaneousStoreMacroStreams, params.macroStreamDepth)(RemaperMask(false, 0, Side.North, 0))
-  )
+    val storeStreamsVecLengthMinusOne = streamData.stores.map(_.micro_pattern.length - 1) ++ Seq.fill(params.maxSimultaneousStoreMacroStreams - numStoreStreams)(0)
 
-  val static = AcceleratorStaticConfigurationData(
-    streamingStage = streamingStage,
-    mesh = mesh.map(_.map(_.toSeq).toSeq).toSeq,
-    delayer = delayer
-  )
+    val streamingEngineStaticConfig = StreamingEngineStaticConfigurationData(loadStreamsConfigured, storeStreamsConfigured, storeStreamsVecLengthMinusOne)
+  
+    
+    def compressedInstructionGenerator(descriptor: MacroDescriptionElement, streamIdx: Int, loadStore: Boolean, first: Boolean, last: Boolean) = {
+      val width = params.dataType.getWidth
+      val elementWidth = {
+        val widthInBytes = params.dataType.getWidth / 8
+        if (params.dataType.getWidth % 8 != 0) {
+          throw new Exception("Width is not divisible by 8.")
+        }
+        widthInBytes - 1
+      }
 
-  val configuration = ConfigurationData(
-    static = static,
-    // Placeholder
-    streamingEngineInstructions = Seq.fill(params.maxConfigurationInstructions)(StreamingEngineCompressedConfigurationChannelData(
+      descriptor match {
+        case VectorizeInstruction(vectorize) => StreamingEngineCompressedConfigurationChannelData(
+          isValid = true,
+          stream = streamIdx,
+          elementWidth = elementWidth,
+          loadStoreOrMod = false,
+          dimOffsetOrModSize = 0,
+          dimSizeOrModTargetAndModBehaviour = 0,
+          end = last,
+          start = first,
+          dimStrideOrModDisplacement = 0,
+          vectorize = vectorize
+        )
+        case DimensionDescriptor(offset, size, stride) => StreamingEngineCompressedConfigurationChannelData(
+          isValid = true,
+          stream = streamIdx,
+          elementWidth = elementWidth,
+          loadStoreOrMod = if (first) loadStore else false,
+          dimOffsetOrModSize = offset,
+          dimSizeOrModTargetAndModBehaviour = size,
+          end = last,
+          start = first,
+          dimStrideOrModDisplacement = stride,
+          vectorize = false
+        )
+        case ModifierDescriptor(target, behavior, displacement, size) => {
+          val targetBits = target match {
+            case "SIZE" => 0
+            case "STRIDE" => 1
+            case "OFFSET" => 2
+            case _ => throw new Exception(s"Invalid target: $target")
+          }
+
+          val behaviorBit = behavior match {
+            case "INC" => 0
+            case "DEC" => 1
+            case _ => throw new Exception(s"Invalid behavior: $behavior")
+          }
+
+          val behaviorAndTarget = (behaviorBit << 2) | targetBits
+          StreamingEngineCompressedConfigurationChannelData(
+            isValid = true,
+            stream = streamIdx,
+            elementWidth = elementWidth,
+            loadStoreOrMod = true,
+            dimOffsetOrModSize = size,
+            dimSizeOrModTargetAndModBehaviour = behaviorAndTarget,
+            end = last,
+            start = first,
+            dimStrideOrModDisplacement = displacement,
+            vectorize = false
+          )
+        }
+      }
+    }
+
+    val loadStreamsInstructions = streamData.loads.zipWithIndex.flatMap { case (stream, streamIdx) =>
+      stream.macro_description.zipWithIndex.map { case (descriptor, idx) =>
+        val first = idx == 0
+        val last = idx == stream.macro_description.length - 1
+        compressedInstructionGenerator(descriptor, streamIdx, loadStore = true, first, last)
+      }
+    }
+
+    val storeStreamsInstructions = streamData.stores.zipWithIndex.flatMap { case (stream, streamIdx) =>
+      stream.macro_description.zipWithIndex.map { case (descriptor, idx) =>
+        val first = idx == 0
+        val last = idx == stream.macro_description.length - 1
+        compressedInstructionGenerator(descriptor, streamIdx + params.maxSimultaneousLoadMacroStreams, loadStore = false, first, last)
+      }
+    }
+
+    val streamingEngineInstructions = loadStreamsInstructions ++ storeStreamsInstructions ++ Seq.fill(params.maxConfigurationInstructions - (loadStreamsInstructions.length + storeStreamsInstructions.length))(StreamingEngineCompressedConfigurationChannelData(
       isValid = false,
       stream = 0,
       elementWidth = 0,
@@ -524,14 +580,98 @@ object MorpherMapping extends App {
       dimStrideOrModDisplacement = 0,
       vectorize = false
     ))
+
+    def findInLoadsOrStores(id: Int) = {
+      val idString = id.toString
+      def findInMicroStreamsId(microStreamsId: microStreamsId) = {
+        val sides = Seq((Side.North, microStreamsId.north), (Side.South, microStreamsId.south), (Side.East, microStreamsId.east), (Side.West, microStreamsId.west))
+
+        sides.flatMap { case (side, array2d) =>
+          array2d.zipWithIndex.flatMap { case (array, moduloCycle) =>
+            array.filter(_ == idString).map(_ => RemaperMask(true, moduloCycle, side, array.indexOf(idString)))
+          }
+        }.headOption
+      }
+      
+      findInMicroStreamsId(loads).orElse(findInMicroStreamsId(stores)).getOrElse(throw new Exception("Value not found in loads or stores"))
+    }
+
+    def singleStreamRemapperMask(micro_pattern: Seq[Option[Int]]) = {
+      micro_pattern.map {
+        case Some(x) => findInLoadsOrStores(x)
+        case None => RemaperMask(false, 0, Side.North, 0)
+      }
+    }
+
+    val loadStreamsRemapperMasks = streamData.loads.map(s => singleStreamRemapperMask(s.micro_pattern))
+    val storeStreamsRemapperMasks = streamData.stores.map(s => singleStreamRemapperMask(s.micro_pattern))
+
+    val loadStreamsRemapperMasksPadded = loadStreamsRemapperMasks.map { streamMask => {
+      if (streamMask.length > params.macroStreamDepth) throw new Exception("Stream mask length is greater than macro stream depth")
+      streamMask ++ Seq.fill(params.macroStreamDepth - streamMask.length)(RemaperMask(false, 0, Side.North, 0))
+      }
+    }
+    val storeStreamsRemapperMasksPadded = storeStreamsRemapperMasks.map { streamMask => {
+      if (streamMask.length > params.macroStreamDepth) throw new Exception("Stream mask length is greater than macro stream depth")
+      streamMask ++ Seq.fill(params.macroStreamDepth - streamMask.length)(RemaperMask(false, 0, Side.North, 0))
+      }
+    }
+
+    if (loadStreamsRemapperMasksPadded.length > params.maxSimultaneousLoadMacroStreams) throw new Exception("Number of load streams is greater than maxSimultaneousLoadMacroStreams")
+    if (storeStreamsRemapperMasksPadded.length > params.maxSimultaneousStoreMacroStreams) throw new Exception("Number of store streams is greater than maxSimultaneousStoreMacroStreams")
+
+    val loadRemaperSwitchesSetup = loadStreamsRemapperMasksPadded ++ Seq.fill(params.maxSimultaneousLoadMacroStreams - loadStreamsRemapperMasksPadded.length)(Seq.fill(params.macroStreamDepth)(RemaperMask(false, 0, Side.North, 0)))
+    val storeRemaperSwitchesSetup = storeStreamsRemapperMasksPadded ++ Seq.fill(params.maxSimultaneousStoreMacroStreams - storeStreamsRemapperMasksPadded.length)(Seq.fill(params.macroStreamDepth)(RemaperMask(false, 0, Side.North, 0)))
+
+    (streamingEngineStaticConfig, streamingEngineInstructions, loadRemaperSwitchesSetup, storeRemaperSwitchesSetup)
+  }
+}
+
+object MorpherMapping extends App {
+  val latencyFile = "./xbitstreams/dotproduct/latency.txt"
+  val routeInfoFile = "./xbitstreams/dotproduct/routeInfo.log"
+  val dfgFile = "./xbitstreams/dotproduct/dfg.xml"
+  val streamsFile = "./xbitstreams/dotproduct/streams.json"
+  val outputFile = "./xbitstreams/dotproduct/configuration.json"
+  val params = CommonBubbleteaParams.mini2x2
+  val socParams = SocParams(
+    cacheLineBytes = 64,
+    frontBusAddressBits = 32,
+    frontBusDataBits = 64,
+    xLen = 64
   )
+  val parser = new MorpherMappingParser(params, socParams)
+
+  val dfg = parser.dfg(dfgFile)
+  val (mesh, loads, stores, initiationInterval) = parser.route(routeInfoFile, dfg)
+  val latency = parser.latency(latencyFile)
+  val (delayer, maxStoreDelay) = parser.delay(loads, stores, latency, initiationInterval)
+
+  val streamsConfigGenerator = new StreamsConfigurationGenerator(params, socParams)
+  val (streamingEngine, streamingEngineInstructions, loadRemaperSwitchesSetup, storeRemaperSwitchesSetup) = streamsConfigGenerator.streams(streamsFile, loads, stores)
+
+  val streamingStage = StreamingStageStaticConfigurationData(
+    streamingEngine = streamingEngine,
+    initiationIntervalMinusOne = initiationInterval - 1,
+    storeStreamsFixedDelay = maxStoreDelay,
+    loadRemaperSwitchesSetup = loadRemaperSwitchesSetup,
+    storeRemaperSwitchesSetup = storeRemaperSwitchesSetup
+  )
+
+  val static = AcceleratorStaticConfigurationData(
+    streamingStage = streamingStage,
+    mesh = mesh.map(_.map(_.toSeq).toSeq).toSeq,
+    delayer = delayer
+  )
+
+  val configuration = ConfigurationData(static, streamingEngineInstructions)
 
   val json = write(configuration, indent = 2)
   //println(json)
 
-  val fileWriter = new FileWriter("configuration.json")
+  val fileWriter = new FileWriter(outputFile)
   fileWriter.write(json)
   fileWriter.close()
   
-  println("Configuration file generated successfully")
+  println(s"Configuration file generated successfully: $outputFile")
 }

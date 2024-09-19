@@ -12,7 +12,7 @@ import upickle.default._
 import scala.io.Source
 import scala.collection.mutable.ArrayBuffer
 
-class BitstreamAssember[T <: Data](configurationFile: String, params: BubbleteaParams[T], socParams: SocParams) extends AnyFlatSpec with ChiselScalatestTester {
+class BitstreamAssember[T <: Data](configurationFile: String, kernelName: String, params: BubbleteaParams[T], socParams: SocParams) extends AnyFlatSpec with ChiselScalatestTester {
   "BitstreamAssembler" should  "generate binary file with bitstream" in {
     test(new Module { 
       val io = IO(new Bundle {
@@ -232,14 +232,14 @@ class BitstreamAssember[T <: Data](configurationFile: String, params: BubbleteaP
       println("Bitstream:")
       bitstream.map(x => f"0x$x%02X ").grouped(16).foreach(x => println(x.mkString))
 
-      val filenameNoExtension = configurationFile.stripSuffix(".json")
-      val out = new FileOutputStream(filenameNoExtension ++ ".bin")
+      val fileDirectory = configurationFile.split("/").dropRight(1).mkString("/") ++ "/"
+      println(fileDirectory)
+      val out = new FileOutputStream(fileDirectory ++ kernelName ++ "_bitstream.bin")
       out.write(bitstream)
       out.close()
 
-      val filenameNoExtensionNoPath = filenameNoExtension.split("/").last
-      val cArray = toCArray(bitstream, socParams.cacheLineBytes, filenameNoExtensionNoPath ++ "_bitstream")
-      val outC = new FileWriter(filenameNoExtension ++ "_bitstream.h")
+      val cArray = toCArray(bitstream, socParams.cacheLineBytes, kernelName ++ "_bitstream")
+      val outC = new FileWriter(fileDirectory ++ kernelName ++ "_bitstream.h")
       outC.write(cArray)
       outC.close()
     }
@@ -247,7 +247,8 @@ class BitstreamAssember[T <: Data](configurationFile: String, params: BubbleteaP
 }
 
 object BitstreamAssembler extends App {
-  val configurationFile = "configuration.json"
+  val configurationFile = "./xbitstreams/dotproduct/configuration.json"
+  val kernelName = "dotproduct"
   val params = CommonBubbleteaParams.mini2x2
   val socParams = SocParams(
     cacheLineBytes = 64,
@@ -255,7 +256,7 @@ object BitstreamAssembler extends App {
     frontBusDataBits = 64,
     xLen = 64
   )
-  org.scalatest.run(new BitstreamAssember(configurationFile, params, socParams))
+  org.scalatest.run(new BitstreamAssember(configurationFile, kernelName, params, socParams))
 }
 
 object JsonTest extends App {
