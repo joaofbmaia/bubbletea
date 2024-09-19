@@ -628,11 +628,12 @@ class StreamsConfigurationGenerator[T <: Data](params: BubbleteaParams[T], socPa
 }
 
 object MorpherMapping extends App {
-  val latencyFile = "./xbitstreams/dotproduct/latency.txt"
-  val routeInfoFile = "./xbitstreams/dotproduct/routeInfo.log"
-  val dfgFile = "./xbitstreams/dotproduct/dfg.xml"
-  val streamsFile = "./xbitstreams/dotproduct/streams.json"
-  val outputFile = "./xbitstreams/dotproduct/configuration.json"
+  val baseDirectory = args(0)
+  val latencyFile = s"$baseDirectory/latency.txt"
+  val routeInfoFile = s"$baseDirectory/routeInfo.log"
+  val dfgFile = s"$baseDirectory/dfg.xml"
+  val streamsFile = s"$baseDirectory/streams.json"
+  val outputFile = s"$baseDirectory/configuration.json"
   val params = CommonBubbleteaParams.mini2x2
   val socParams = SocParams(
     cacheLineBytes = 64,

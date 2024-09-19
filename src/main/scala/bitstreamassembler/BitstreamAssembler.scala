@@ -247,8 +247,9 @@ class BitstreamAssember[T <: Data](configurationFile: String, kernelName: String
 }
 
 object BitstreamAssembler extends App {
-  val configurationFile = "./xbitstreams/dotproduct/configuration.json"
-  val kernelName = "dotproduct"
+  val baseDirectory = args(0)
+  val configurationFile = s"$baseDirectory/configuration.json"
+  val kernelName = baseDirectory.split("/").last
   val params = CommonBubbleteaParams.mini2x2
   val socParams = SocParams(
     cacheLineBytes = 64,
