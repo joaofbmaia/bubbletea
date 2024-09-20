@@ -20,6 +20,9 @@ class FunctionalUnit[T <: Data: Arithmetic](params: BubbleteaParams[T]) (implici
 
   io.result := DontCare
 
+  val maxShiftBits = log2Ceil(params.dataType.getWidth)
+  val truncatedB = io.b.asUInt(maxShiftBits - 1, 0)
+
   switch(io.op) {
     is(FUSel.nop) {
       io.result := io.a
@@ -34,22 +37,22 @@ class FunctionalUnit[T <: Data: Arithmetic](params: BubbleteaParams[T]) (implici
       io.result := io.a * io.b
     }
     is(FUSel.shl) {
-      io.result := io.a.asUInt << io.b.asUInt
+      io.result := (io.a.asUInt << truncatedB).asTypeOf(io.result)
     }
     is(FUSel.lshr) {
-      io.result := (io.a.asUInt >> io.b.asUInt).asTypeOf(io.a)
+      io.result := (io.a.asUInt >> truncatedB).asTypeOf(io.a).asTypeOf(io.result)
     }
     is(FUSel.ashr) {
-      io.result := (io.a.asUInt.asSInt >> io.b.asUInt).asTypeOf(io.a)
+      io.result := (io.a.asUInt.asSInt >> truncatedB).asTypeOf(io.a).asTypeOf(io.result)
     }
     is(FUSel.and) {
-      io.result := io.a.asUInt & io.b.asUInt
+      io.result := (io.a.asUInt & io.b.asUInt).asTypeOf(io.result)
     }
     is(FUSel.or) {
-      io.result := io.a.asUInt | io.b.asUInt
+      io.result := (io.a.asUInt | io.b.asUInt).asTypeOf(io.result)
     }
     is(FUSel.xor) {
-      io.result := io.a.asUInt ^ io.b.asUInt
+      io.result := (io.a.asUInt ^ io.b.asUInt).asTypeOf(io.result)
     }
   }
 
