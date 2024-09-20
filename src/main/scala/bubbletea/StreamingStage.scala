@@ -95,7 +95,7 @@ class StreamingStage[T <: Data](params: BubbleteaParams[T], socParams: SocParams
   streamingEngine.io.storeStreams :<>= storeRemaper.io.macroStreamsOut
 
   // Store steam fixed delay (the register delays in the mesh subtract from this delay on the store side)
-  val storeDelayCounter = withReset(reset.asBool || io.control.reset)(RegInit(0.U(log2Ceil(params.maxDelayIntervals + 1).W)))
+  val storeDelayCounter = withReset(reset.asBool || io.control.reset)(RegInit(0.U(log2Ceil(params.maxStoreStreamFixedDelay + 1).W)))
   val storeDelayDone = WireInit(storeDelayCounter === io.staticConfiguration.storeStreamsFixedDelay)
   when(meshFire && currentModuloCycle === io.staticConfiguration.initiationIntervalMinusOne && !storeDelayDone) {
     storeDelayCounter := storeDelayCounter + 1.U
