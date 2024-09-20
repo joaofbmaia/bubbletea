@@ -8,7 +8,7 @@ import freechips.rocketchip.amba.axi4.{AXI4Bundle, AXI4BundleParameters}
 class StreamingStageStaticConfigurationBundle[T <: Data](params: BubbleteaParams[T]) extends Bundle {
   val streamingEngine = new StreamingEngineStaticConfigurationBundle(params)
   val initiationIntervalMinusOne = UInt(log2Ceil(params.maxInitiationInterval).W)
-  val storeStreamsFixedDelay = UInt(log2Ceil(params.maxDelayIntervals + 1).W)
+  val storeStreamsFixedDelay = UInt(log2Ceil(params.maxStoreStreamFixedDelay + 1).W)
   val loadRemaperSwitchesSetup = Vec(params.numberOfLoadRemaperSwitchStages, Vec(params.numberOfLoadRemaperSwitchesPerStage, Bool()))
   val storeRemaperSwitchesSetup = Vec(params.numberOfStoreRemaperSwitchStages, Vec(params.numberOfStoreRemaperSwitchesPerStage, Bool()))
 }

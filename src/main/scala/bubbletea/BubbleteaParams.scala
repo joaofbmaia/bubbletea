@@ -39,6 +39,7 @@ trait BubbleteaParams[T <: Data] {
   val rfWritePorts: Int
 
   val maxDelayIntervals: Int
+  val maxStoreStreamFixedDelay: Int
 
 
   val maxLoadMicroStreams: Int = (2 * meshRows + 2 * meshColumns) * maxInitiationInterval
@@ -88,7 +89,8 @@ case class UIntBubbleteaParams(
   rfReadPorts: Int,
   rfWritePorts: Int,
 
-  maxDelayIntervals: Int
+  maxDelayIntervals: Int,
+  maxStoreStreamFixedDelay: Int
 ) extends BubbleteaParams[UInt]
 
 case class SIntBubbleteaParams(
@@ -121,7 +123,8 @@ case class SIntBubbleteaParams(
   rfReadPorts: Int,
   rfWritePorts: Int,
 
-  maxDelayIntervals: Int
+  maxDelayIntervals: Int,
+  maxStoreStreamFixedDelay: Int
 ) extends BubbleteaParams[SInt]
 
 case class FloatBubbleteaParams(
@@ -154,7 +157,8 @@ case class FloatBubbleteaParams(
   rfReadPorts: Int,
   rfWritePorts: Int,
 
-  maxDelayIntervals: Int
+  maxDelayIntervals: Int,
+  maxStoreStreamFixedDelay: Int
 ) extends BubbleteaParams[Float]
 
 object CommonBubbleteaParams {
@@ -183,7 +187,8 @@ object CommonBubbleteaParams {
     rfSize = 2,
     rfReadPorts = 2,
     rfWritePorts = 2,
-    maxDelayIntervals = 4
+    maxDelayIntervals = 4,
+    maxStoreStreamFixedDelay = 16
   )
 
   val minimalConfig = UIntBubbleteaParams(
@@ -212,7 +217,8 @@ object CommonBubbleteaParams {
     rfSize = 2,
     rfReadPorts = 2,
     rfWritePorts = 2,
-    maxDelayIntervals = 1
+    maxDelayIntervals = 1,
+    maxStoreStreamFixedDelay = 4
   )
 
   val mini2x2 = UIntBubbleteaParams(
@@ -241,6 +247,37 @@ object CommonBubbleteaParams {
     rfSize = 4,
     rfReadPorts = 4,
     rfWritePorts = 4,
-    maxDelayIntervals = 4
+    maxDelayIntervals = 4,
+    maxStoreStreamFixedDelay = 16
+  )
+
+  val float4x4 = FloatBubbleteaParams(
+    baseAddress = 0x10080000,
+    dataType = Float(8, 24),
+    meshRows = 4,
+    meshColumns = 4,
+    maxInitiationInterval = 8,
+    //  not minimal below
+    maxSimultaneousLoadMacroStreams = 4,
+    maxSimultaneousStoreMacroStreams = 4, // right now this must be the same as maxSimultaneousLoadMacroStreams
+    maxConfigurationInstructions = 16,
+    seMaxStreamDims = 4,
+    seMaxStreamMods = 3,
+    seOffsetWidth = 33,
+    seStrideWidth = 32,
+    seSizeWidth = 32,
+    seStreamIdWidth = 32,
+    seLrqNumTables = 64, // II * N * 2
+    seLrqNumRequests = 2,
+    seLlbNumTables = 4,
+    seLmmuNumVecs = 4,
+    seSmmuNumAddresses = 32,
+    seMaxNumLoadStreams = 4,
+    seMaxNumStoreStreams = 4,
+    rfSize = 4,
+    rfReadPorts = 2,
+    rfWritePorts = 2,
+    maxDelayIntervals = 2,
+    maxStoreStreamFixedDelay = 32
   )
 }
