@@ -8,6 +8,7 @@ import java.io._
 import scala.util.matching.Regex
 import scala.collection.mutable.ArrayBuffer
 import scala.util.control.Breaks._
+import chisel3.util.log2Ceil
 
 
 case class microStreamsId(
@@ -489,11 +490,14 @@ class StreamsConfigurationGenerator[T <: Data](params: BubbleteaParams[T], socPa
     def compressedInstructionGenerator(descriptor: MacroDescriptionElement, streamIdx: Int, loadStore: Boolean, first: Boolean, last: Boolean) = {
       val width = params.dataType.getWidth
       val elementWidth = {
-        val widthInBytes = params.dataType.getWidth / 8
-        if (params.dataType.getWidth % 8 != 0) {
+        def isPowerOfTwo(x: Int): Boolean = (x & (x - 1)) == 0
+        if (width % 8 != 0) {
           throw new Exception("Width is not divisible by 8.")
         }
-        widthInBytes - 1
+        if (!isPowerOfTwo(width / 8)) {
+          throw new Exception("Width in bytes is not a power of 2.")
+        }
+        log2Ceil(width / 8)
       }
 
       descriptor match {
