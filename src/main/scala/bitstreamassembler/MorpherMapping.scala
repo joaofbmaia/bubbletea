@@ -186,7 +186,10 @@ class MorpherMappingParser[T <: Data](params: BubbleteaParams[T], socParams: Soc
         mesh(t)(y)(x).op = fuOp
         mesh(t)(y)(x).immediate = immediate
 
-        hasConstant(t)(y)(x) = true
+        hasConstant(t)(y)(x) = dfgNode.const match {
+          case "" => false
+          case _ => true
+        }
       }
     }
 
