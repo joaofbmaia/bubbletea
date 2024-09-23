@@ -46,9 +46,9 @@ class ProcessingElementConfigBundle[T <: Data](params: BubbleteaParams[T]) exten
   val outRegsEn = new OutRegsEnBundle
   val rfWritePortsSel = new RfWritePortsSrcSelBundle(params)
   val fuSrcSel = new FuSrcSelBundle(params)
-  val rfWriteAddr = Vec(params.rfWritePorts, UInt(log2Ceil(params.rfSize).W))
   val rfReadAddr = Vec(params.rfReadPorts, UInt(log2Ceil(params.rfSize).W))
-  val rfWriteEn = Vec(params.rfWritePorts, Bool())
+  val rfWriteRegSourceSel = Vec(params.rfSize, UInt(log2Ceil(params.rfWritePorts).W))
+  val rfWriteEn = Vec(params.rfSize, Bool())
   val immediate = Output(params.dataType)
 }
 
@@ -105,10 +105,11 @@ class ProcessingElement[T <: Data: Arithmetic](params: BubbleteaParams[T]) exten
     Seq(functionalUnit.io.result, io.in.north, io.in.south, io.in.west, io.in.east).zipWithIndex.map { case (x, i) => i.U -> x }
 
   for (i <- 0 until params.rfWritePorts) {  
-    registerFile.io.writeEnable(i) := io.configuration.rfWriteEn(i) && io.fire
-    registerFile.io.writeAddress(i) := io.configuration.rfWriteAddr(i)
     registerFile.io.writeData(i) := MuxLookup(io.configuration.rfWritePortsSel.ports(i), dontCareDefault)(rfWriteSrcLookup)
   }
+
+  registerFile.io.writeEnable := io.configuration.rfWriteEn.map(_ && io.fire)
+  registerFile.io.writeSourceSel := io.configuration.rfWriteRegSourceSel
 
   for (i <- 0 until params.rfReadPorts) {
     registerFile.io.readAddress(i) := io.configuration.rfReadAddr(i)

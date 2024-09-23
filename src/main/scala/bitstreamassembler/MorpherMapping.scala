@@ -105,9 +105,9 @@ class MorpherMappingParser[T <: Data](params: BubbleteaParams[T], socParams: Soc
       outRegsEn = OutRegsEnData(false, false, false, false),
       rfWritePortsSel = RfWritePortsSrcSelData(ArrayBuffer.fill(params.rfWritePorts)(0)),
       fuSrcSel = FuSrcSelData(0, 0),
-      rfWriteAddr = ArrayBuffer.fill(params.rfWritePorts)(0),
+      rfWriteRegSourceSel = ArrayBuffer.fill(params.rfSize)(0),
       rfReadAddr = ArrayBuffer.fill(params.rfReadPorts)(0),
-      rfWriteEn = ArrayBuffer.fill(params.rfWritePorts)(false),
+      rfWriteEn = ArrayBuffer.fill(params.rfSize)(false),
       immediate = 0
     ))
 
@@ -348,11 +348,11 @@ class MorpherMappingParser[T <: Data](params: BubbleteaParams[T], socParams: Soc
       }
       else if (dstType == "RF_REG_WRITE" && srcType == "RF_WP") {
         // this is the case where the data is written to a register
-        // we must set the register write address to the write port, and enable the write port
+        // we must set the register's source select to the write port, and write enable it
         assert(nameToXYT(src) == nameToXYT(dst))
         val (x1, y1, t) = nameToXYT(src)
-        mesh(t)(y1 - 1)(x1 - 1).rfWriteAddr(srcValue.toInt) = dstValue.toInt
-        mesh(t)(y1 - 1)(x1 - 1).rfWriteEn(srcValue.toInt) = true
+        mesh(t)(y1 - 1)(x1 - 1).rfWriteRegSourceSel(dstValue.toInt) = srcValue.toInt
+        mesh(t)(y1 - 1)(x1 - 1).rfWriteEn(dstValue.toInt) = true
       }
       else if (dstType == "RF_REG_WRITE" && srcType == "RF_REG_READ") {
         // this is simply the case where the data stays in the register

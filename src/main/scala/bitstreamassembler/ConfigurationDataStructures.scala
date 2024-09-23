@@ -72,8 +72,8 @@ case class ProcessingElementConfigData(
   outRegsEn: OutRegsEnData,
   rfWritePortsSel: RfWritePortsSrcSelData,
   fuSrcSel: FuSrcSelData,
-  rfWriteAddr: ArrayBuffer[Int],
   rfReadAddr: ArrayBuffer[Int],
+  rfWriteRegSourceSel: ArrayBuffer[Int],
   rfWriteEn: ArrayBuffer[Boolean],
   var immediate: BigInt,
 )

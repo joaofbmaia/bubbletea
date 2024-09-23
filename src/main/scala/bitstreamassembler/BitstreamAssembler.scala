@@ -115,9 +115,9 @@ class BitstreamAssember[T <: Data](configurationFile: String, kernelName: String
               dut.io.in.static.mesh(i)(j)(k).fuSrcSel.a.poke(configurationData.static.mesh(i)(j)(k).fuSrcSel.a.U)
               dut.io.in.static.mesh(i)(j)(k).fuSrcSel.b.poke(configurationData.static.mesh(i)(j)(k).fuSrcSel.b.U)
 
-              assert(configurationData.static.mesh(i)(j)(k).rfWriteAddr.length == params.rfWritePorts)
-              for (l <- 0 until params.rfWritePorts) {
-                dut.io.in.static.mesh(i)(j)(k).rfWriteAddr(l).poke(configurationData.static.mesh(i)(j)(k).rfWriteAddr(l).U)
+              assert(configurationData.static.mesh(i)(j)(k).rfWriteRegSourceSel.length == params.rfSize)
+              for (l <- 0 until params.rfSize) {
+                dut.io.in.static.mesh(i)(j)(k).rfWriteRegSourceSel(l).poke(configurationData.static.mesh(i)(j)(k).rfWriteRegSourceSel(l).U)
               }
 
               assert(configurationData.static.mesh(i)(j)(k).rfReadAddr.length == params.rfReadPorts)
@@ -125,8 +125,8 @@ class BitstreamAssember[T <: Data](configurationFile: String, kernelName: String
                 dut.io.in.static.mesh(i)(j)(k).rfReadAddr(l).poke(configurationData.static.mesh(i)(j)(k).rfReadAddr(l).U)
               }
 
-              assert(configurationData.static.mesh(i)(j)(k).rfWriteEn.length == params.rfWritePorts)  
-              for (l <- 0 until params.rfWritePorts) {
+              assert(configurationData.static.mesh(i)(j)(k).rfWriteEn.length == params.rfSize)  
+              for (l <- 0 until params.rfSize) {
                 dut.io.in.static.mesh(i)(j)(k).rfWriteEn(l).poke(configurationData.static.mesh(i)(j)(k).rfWriteEn(l).B)
               }
 
@@ -258,180 +258,4 @@ object BitstreamAssembler extends App {
     xLen = 64
   )
   org.scalatest.run(new BitstreamAssember(configurationFile, kernelName, params, socParams))
-}
-
-object JsonTest extends App {
-  val configuration = ConfigurationData(
-    static = AcceleratorStaticConfigurationData(
-      streamingStage = StreamingStageStaticConfigurationData(
-        streamingEngine = StreamingEngineStaticConfigurationData(
-          loadStreamsConfigured = Seq(true, false),
-          storeStreamsConfigured = Seq(true, false),
-          storeStreamsVecLengthMinusOne = Seq(3, 0)
-        ),
-        initiationIntervalMinusOne = 0,
-        storeStreamsFixedDelay = 2,
-        loadRemaperSwitchesSetup = Seq(
-          Seq.fill(8)(RemaperMask(false, 0, Side.North, 0)),
-          Seq.fill(8)(RemaperMask(false, 0, Side.North, 0))
-        ),
-        storeRemaperSwitchesSetup = Seq(
-          Seq.fill(8)(RemaperMask(false, 0, Side.North, 0)),
-          Seq.fill(8)(RemaperMask(false, 0, Side.North, 0))
-        )
-      ),
-      mesh = Seq(
-        Seq(
-          Seq(
-            ProcessingElementConfigData(
-              op = FuAdd,
-              outRegsSel = OutRegsSrcSelData(0, 0, 0, 0),
-              outRegsEn = OutRegsEnData(false, false, false, false),
-              rfWritePortsSel = RfWritePortsSrcSelData(ArrayBuffer(0, 0)),
-              fuSrcSel = FuSrcSelData(0, 0),
-              rfWriteAddr = ArrayBuffer(0, 0),
-              rfReadAddr = ArrayBuffer(0, 0),
-              rfWriteEn = ArrayBuffer(true, false),
-              immediate = 0
-            ),
-            ProcessingElementConfigData(
-              op = FuAdd,
-              outRegsSel = OutRegsSrcSelData(0, 0, 0, 0),
-              outRegsEn = OutRegsEnData(false, false, false, false),
-              rfWritePortsSel = RfWritePortsSrcSelData(ArrayBuffer(0, 0)),
-              fuSrcSel = FuSrcSelData(0, 0),
-              rfWriteAddr = ArrayBuffer(0, 0),
-              rfReadAddr = ArrayBuffer(0, 0),
-              rfWriteEn = ArrayBuffer(true, false),
-              immediate = 0
-            )
-          ),
-          Seq(
-            ProcessingElementConfigData(
-              op = FuAdd,
-              outRegsSel = OutRegsSrcSelData(0, 0, 0, 0),
-              outRegsEn = OutRegsEnData(false, false, false, false),
-              rfWritePortsSel = RfWritePortsSrcSelData(ArrayBuffer(0, 0)),
-              fuSrcSel = FuSrcSelData(0, 0),
-              rfWriteAddr = ArrayBuffer(0, 0),
-              rfReadAddr = ArrayBuffer(0, 0),
-              rfWriteEn = ArrayBuffer(true, false),
-              immediate = 0
-            ),
-            ProcessingElementConfigData(
-              op = FuAdd,
-              outRegsSel = OutRegsSrcSelData(0, 0, 0, 0),
-              outRegsEn = OutRegsEnData(false, false, false, false),
-              rfWritePortsSel = RfWritePortsSrcSelData(ArrayBuffer(0, 0)),
-              fuSrcSel = FuSrcSelData(0, 0),
-              rfWriteAddr = ArrayBuffer(0, 0),
-              rfReadAddr = ArrayBuffer(0, 0),
-              rfWriteEn = ArrayBuffer(true, false),
-              immediate = 0
-            )
-          )
-        ),
-        Seq(
-          Seq(
-            ProcessingElementConfigData(
-              op = FuAdd,
-              outRegsSel = OutRegsSrcSelData(0, 0, 0, 0),
-              outRegsEn = OutRegsEnData(false, false, false, false),
-              rfWritePortsSel = RfWritePortsSrcSelData(ArrayBuffer(0, 0)),
-              fuSrcSel = FuSrcSelData(0, 0),
-              rfWriteAddr = ArrayBuffer(0, 0),
-              rfReadAddr = ArrayBuffer(0, 0),
-              rfWriteEn = ArrayBuffer(true, false),
-              immediate = 0
-            ),
-            ProcessingElementConfigData(
-              op = FuAdd,
-              outRegsSel = OutRegsSrcSelData(0, 0, 0, 0),
-              outRegsEn = OutRegsEnData(false, false, false, false),
-              rfWritePortsSel = RfWritePortsSrcSelData(ArrayBuffer(0, 0)),
-              fuSrcSel = FuSrcSelData(0, 0),
-              rfWriteAddr = ArrayBuffer(0, 0),
-              rfReadAddr = ArrayBuffer(0, 0),
-              rfWriteEn = ArrayBuffer(true, false),
-              immediate = 0
-            )
-          ),
-          Seq(
-            ProcessingElementConfigData(
-              op = FuAdd,
-              outRegsSel = OutRegsSrcSelData(0, 0, 0, 0),
-              outRegsEn = OutRegsEnData(false, false, false, false),
-              rfWritePortsSel = RfWritePortsSrcSelData(ArrayBuffer(0, 0)),
-              fuSrcSel = FuSrcSelData(0, 0),
-              rfWriteAddr = ArrayBuffer(0, 0),
-              rfReadAddr = ArrayBuffer(0, 0),
-              rfWriteEn = ArrayBuffer(true, false),
-              immediate = 0
-            ),
-            ProcessingElementConfigData(
-              op = FuAdd,
-              outRegsSel = OutRegsSrcSelData(0, 0, 0, 0),
-              outRegsEn = OutRegsEnData(false, false, false, false),
-              rfWritePortsSel = RfWritePortsSrcSelData(ArrayBuffer(0, 0)),
-              fuSrcSel = FuSrcSelData(0, 0),
-              rfWriteAddr = ArrayBuffer(0, 0),
-              rfReadAddr = ArrayBuffer(0, 0),
-              rfWriteEn = ArrayBuffer(true, false),
-              immediate = 0
-            )
-          )
-        )
-      ),
-      delayer = DelayerConfigData(
-        loads = Seq.fill(2)(DelayerBundleData(
-          north = Seq(0, 0),
-          south = Seq(0, 0),
-          west = Seq(0, 0),
-          east = Seq(0, 0)
-        )),
-        stores = Seq.fill(2)(DelayerBundleData(
-          north = Seq(0, 0),
-          south = Seq(0, 0),
-          west = Seq(0, 0),
-          east = Seq(0, 0)
-        ))
-      )
-    ),
-    streamingEngineInstructions = Seq(
-      StreamingEngineCompressedConfigurationChannelData(
-        isValid = true,
-        stream = 1,
-        elementWidth = 2,
-        loadStoreOrMod = true,
-        dimOffsetOrModSize = 0,
-        dimSizeOrModTargetAndModBehaviour = 16,
-        end = false,
-        start = true,
-        dimStrideOrModDisplacement = 4,
-        vectorize = true
-      )
-    ) ++ Seq.fill(15)(StreamingEngineCompressedConfigurationChannelData(
-      isValid = false,
-      stream = 0,
-      elementWidth = 0,
-      loadStoreOrMod = false,
-      dimOffsetOrModSize = 0,
-      dimSizeOrModTargetAndModBehaviour = 0,
-      end = false,
-      start = false,
-      dimStrideOrModDisplacement = 0,
-      vectorize = false
-    ))
-  )
-
-  val json = write(configuration, indent = 2)
-  println(json)
-
-  val fileWriter = new FileWriter("test.json")
-  fileWriter.write(json)
-  fileWriter.close()
-
-  //val deserialized = read[ConfigurationData](json)
-  val deserialized = read[ConfigurationData](Source.fromFile("test.json").getLines().mkString)
-  assert(configuration == deserialized)
 }
