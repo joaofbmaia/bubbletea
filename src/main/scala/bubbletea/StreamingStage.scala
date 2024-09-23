@@ -21,6 +21,14 @@ class StreamingStageControlBundle[T <: Data](params: BubbleteaParams[T]) extends
   val done = Input(Bool())
 }
 
+class StreamingStageHpcBundle extends Bundle {
+  val totalCycles = UInt(64.W)
+  val fires = UInt(64.W)
+  val loadStalls = UInt(64.W)
+  val storeStalls = UInt(64.W)
+  val se = new StreamingEngineHpcBundle
+}
+
 class StreamingStage[T <: Data](params: BubbleteaParams[T], socParams: SocParams) extends Module {
   assert(
     params.maxSimultaneousLoadMacroStreams * params.macroStreamDepth == params.maxInitiationInterval * (2 * params.meshRows + 2 * params.meshColumns),
@@ -37,6 +45,8 @@ class StreamingStage[T <: Data](params: BubbleteaParams[T], socParams: SocParams
     val staticConfiguration = Input(new StreamingStageStaticConfigurationBundle(params))
 
     val seConfigurationChannel = Flipped(Decoupled(new StreamingEngineConfigurationChannelBundle(params)))
+
+    val hpc = Output(new StreamingStageHpcBundle)
   })
 
   val meshFire = Wire(Bool())
@@ -110,4 +120,34 @@ class StreamingStage[T <: Data](params: BubbleteaParams[T], socParams: SocParams
   io.control.meshFire := meshFire
   io.control.currentModuloCycle := currentModuloCycle
   io.control.done := streamingEngine.io.control.storeStreamsDone
+
+  // HPC
+  withReset(reset.asBool || io.control.reset) {
+    val totalCycles = RegInit(0.U(64.W))
+    val fires = RegInit(0.U(64.W))
+    val loadStalls = RegInit(0.U(64.W))
+    val storeStalls = RegInit(0.U(64.W))
+
+    when(io.control.meshRun && !streamingEngine.io.control.storeStreamsDone) {
+      totalCycles := totalCycles + 1.U
+    }
+
+    when(meshFire) {
+      fires := fires + 1.U
+    }
+
+    when(io.control.meshRun && !(loadRemaper.io.microStreamsOut.valid || streamingEngine.io.control.loadStreamsDone)) {
+      loadStalls := loadStalls + 1.U
+    }
+
+    when(io.control.meshRun && !(!storeDelayDone || microStreamsRegReady)) {
+      storeStalls := storeStalls + 1.U
+    }
+
+    io.hpc.totalCycles := totalCycles
+    io.hpc.fires := fires
+    io.hpc.loadStalls := loadStalls
+    io.hpc.storeStalls := storeStalls
+    io.hpc.se := streamingEngine.io.hpc
+  }
 }

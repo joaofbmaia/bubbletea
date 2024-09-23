@@ -95,6 +95,9 @@ class Bubbletea[T <: Data: Arithmetic](params: BubbleteaParams[T])(implicit p: P
             loadBitstream := false.B
         }
 
+        // Streaming Stage HPC
+        val ssHpc = Wire(new StreamingStageHpcBundle)
+
         // Streaming Engine Node
         val (axi, _) = seAxiNode.out.head
 
@@ -119,6 +122,48 @@ class Bubbletea[T <: Data: Arithmetic](params: BubbleteaParams[T])(implicit p: P
             ),
             0x10 -> Seq(
                 RegField(socParams.xLen, bitstreamBaseAddress, RegFieldDesc("bitstreamBaseAddress", "Configuration bitstream base address"))
+            ),
+            0x20 -> Seq(
+                RegField.r(64, ssHpc.totalCycles, RegFieldDesc("totalCycles", "Total number of compute cycles the accelerator has run"))
+            ),
+            0x28 -> Seq(
+                RegField.r(64, ssHpc.fires, RegFieldDesc("fires", "Number of times the accelerator has fired"))
+            ),
+            0x30 -> Seq(
+                RegField.r(64, ssHpc.loadStalls, RegFieldDesc("loadStalls", "Number of times the accelerator did not fire due to the load pipeline being stalled"))
+            ),
+            0x38 -> Seq(
+                RegField.r(64, ssHpc.storeStalls, RegFieldDesc("storeStalls", "Number of times the accelerator did not fire due to the store pipeline being stalled"))
+            ),
+            0x40 -> Seq(
+                RegField.r(32, ssHpc.se.ssDesc, RegFieldDesc("seDesc", "Number of cycles iterating higher dimensions"))
+            ),
+            0x44 -> Seq(
+                RegField.r(32, ssHpc.se.lmmuCommit, RegFieldDesc("lmmuCommit", "Number of accepted addresses by the LMMU"))
+            ),
+            0x48 -> Seq(
+                RegField.r(32, ssHpc.se.lmmuStall, RegFieldDesc("lmmuStall", "Number of stalls triggered by the LMMU"))
+            ),
+            0x4C -> Seq(
+                RegField.r(32, ssHpc.se.llmuStallLf, RegFieldDesc("llmuStallLf", "Number stalls triggered by the LFIFO"))
+            ),
+            0x50 -> Seq(
+                RegField.r(32, ssHpc.se.llmuStallLrq, RegFieldDesc("llmuStallLrq", "Number stalls triggered by the LRQ"))
+            ),
+            0x54 -> Seq(
+                RegField.r(32, ssHpc.se.llmuStallLlb, RegFieldDesc("llmuStallLlb", "Number stalls triggered by the LLB"))
+            ),
+            0x58 -> Seq(
+                RegField.r(32, ssHpc.se.smmuCommit, RegFieldDesc("smmuCommit", "Number of accepted addresses by the SMMU"))
+            ),
+            0x5C -> Seq(
+                RegField.r(32, ssHpc.se.smmuStall, RegFieldDesc("smmuStall", "Number of stalls triggered by the SMMU"))
+            ),
+            0x60 -> Seq(
+                RegField.r(16, ssHpc.se.opsLoad, RegFieldDesc("opsLoad", "Total number of load request operations"))
+            ),
+            0x62 -> Seq(
+                RegField.r(16, ssHpc.se.opsStore, RegFieldDesc("opsStore", "Total number of store request operations"))
             )
         )
 
@@ -148,5 +193,8 @@ class Bubbletea[T <: Data: Arithmetic](params: BubbleteaParams[T])(implicit p: P
 
         meshWithDelays.io.meshConfiguration := controllerIo.staticConfiguration.mesh
         meshWithDelays.io.delayerConfiguration := controllerIo.staticConfiguration.delayer
+
+        // HPC
+        ssHpc := streamingStage.io.hpc
     }   
 }
