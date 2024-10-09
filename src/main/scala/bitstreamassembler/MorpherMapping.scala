@@ -641,7 +641,7 @@ object MorpherMapping extends App {
   val dfgFile = s"$baseDirectory/dfg.xml"
   val streamsFile = s"$baseDirectory/streams.json"
   val outputFile = s"$baseDirectory/configuration.json"
-  val params = CommonBubbleteaParams.float4x4
+  val params = CommonBubbleteaParams.float4x4x16
   val socParams = SocParams(
     cacheLineBytes = 64,
     frontBusAddressBits = 32,

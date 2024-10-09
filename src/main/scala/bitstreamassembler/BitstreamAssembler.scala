@@ -250,7 +250,7 @@ object BitstreamAssembler extends App {
   val baseDirectory = args(0)
   val configurationFile = s"$baseDirectory/configuration.json"
   val kernelName = baseDirectory.split("/").last
-  val params = CommonBubbleteaParams.float4x4
+  val params = CommonBubbleteaParams.float4x4x16
   val socParams = SocParams(
     cacheLineBytes = 64,
     frontBusAddressBits = 32,
