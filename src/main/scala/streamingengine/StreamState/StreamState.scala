@@ -200,7 +200,7 @@ extends Module {
         val mmu_out_type       = Output(Bool())
 
         /* Performance counters */
-        val hpc_ss_desc = Output(UInt(32.W))
+        val hpc_ss_desc = Output(UInt(64.W))
 
     })
 
@@ -251,7 +251,7 @@ extends Module {
     val state_appl_reg = Reg(Vec(2, Bool()))
 
     /* Performance counter registers */
-    val hpc_ss_desc = Reg(UInt(32.W))
+    val hpc_ss_desc = Reg(UInt(64.W))
 
 
 

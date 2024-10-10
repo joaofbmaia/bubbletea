@@ -162,9 +162,9 @@ extends Module {
 		val axi_b_ready 			= Output(Bool()) 
 
 		/* Performance counters */
-		val hpc_smmu_commit = Output(UInt(32.W))  
-        val hpc_smmu_stall  = Output(UInt(32.W))
-		val hpc_ops_store      = Output(UInt(16.W))
+		val hpc_smmu_commit = Output(UInt(64.W))  
+        val hpc_smmu_stall  = Output(UInt(64.W))
+		val hpc_ops_store      = Output(UInt(64.W))
 
     })
 
@@ -209,9 +209,9 @@ extends Module {
 	val buffer_valid 	= Reg(Bool())
 
 	/* Performance Counters */
-	val hpc_smmu_commit = Reg(UInt(32.W))
-	val hpc_smmu_stall  = Reg(UInt(32.W))
-	val hpc_ops_store   = Reg(UInt(16.W))
+	val hpc_smmu_commit = Reg(UInt(64.W))
+	val hpc_smmu_stall  = Reg(UInt(64.W))
+	val hpc_ops_store   = Reg(UInt(64.W))
 
 
 

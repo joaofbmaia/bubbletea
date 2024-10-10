@@ -93,12 +93,12 @@ extends Module {
         val axi_r_ready = Output(Bool())   
 
         /* Performance counters */
-        val hpc_lmmu_commit    = Output(UInt(32.W))
-        val hpc_lmmu_stall     = Output(UInt(32.W))
-        val hpc_lmmu_stall_lrq = Output(UInt(32.W))
-        val hpc_lmmu_stall_lf  = Output(UInt(32.W))
-        val hpc_lmmu_stall_llb = Output(UInt(32.W))
-        val hpc_ops_load       = Output(UInt(16.W)) 
+        val hpc_lmmu_commit    = Output(UInt(64.W))
+        val hpc_lmmu_stall     = Output(UInt(64.W))
+        val hpc_lmmu_stall_lrq = Output(UInt(64.W))
+        val hpc_lmmu_stall_lf  = Output(UInt(64.W))
+        val hpc_lmmu_stall_llb = Output(UInt(64.W))
+        val hpc_ops_load       = Output(UInt(64.W)) 
 
     })
 
@@ -141,10 +141,10 @@ extends Module {
     /* Declaring hardware performance counters regarding the
      * number of addresses received and the number of stalls
      */
-    val hpc_lmmu_commit    = Reg(UInt(32.W))
-    val hpc_lmmu_stall     = Reg(UInt(32.W))
-    val hpc_lmmu_stall_lf  = Reg(UInt(32.W))
-    val hpc_lmmu_stall_lrq = Reg(UInt(32.W))
+    val hpc_lmmu_commit    = Reg(UInt(64.W))
+    val hpc_lmmu_stall     = Reg(UInt(64.W))
+    val hpc_lmmu_stall_lf  = Reg(UInt(64.W))
+    val hpc_lmmu_stall_lrq = Reg(UInt(64.W))
 
 
 

@@ -38,16 +38,16 @@ class StreamingEngineConfigurationChannelBundle[T <: Data](params: BubbleteaPara
 }
 
 class StreamingEngineHpcBundle extends Bundle {
-  val ssDesc = UInt(32.W)
-  val lmmuCommit = UInt(32.W)
-  val lmmuStall = UInt(32.W)
-  val llmuStallLf = UInt(32.W)
-  val llmuStallLrq = UInt(32.W)
-  val llmuStallLlb = UInt(32.W)
-  val smmuCommit = UInt(32.W)
-  val smmuStall = UInt(32.W)
-  val opsLoad = UInt(16.W)
-  val opsStore = UInt(16.W)
+  val ssDesc = UInt(64.W)
+  val lmmuCommit = UInt(64.W)
+  val lmmuStall = UInt(64.W)
+  val llmuStallLf = UInt(64.W)
+  val llmuStallLrq = UInt(64.W)
+  val llmuStallLlb = UInt(64.W)
+  val smmuCommit = UInt(64.W)
+  val smmuStall = UInt(64.W)
+  val opsLoad = UInt(64.W)
+  val opsStore = UInt(64.W)
 }
 
 class StreamingEngine[T <: Data](params: BubbleteaParams[T], socParams: SocParams) extends Module {

@@ -85,7 +85,7 @@ extends Module {
         val axi_r_ready = Output(Bool())
 
         /* Performance counters */
-        val hpc_ops_load = Output(UInt(16.W)) 
+        val hpc_ops_load = Output(UInt(64.W)) 
 
     })
 
@@ -113,7 +113,7 @@ extends Module {
     val load_okay  = Reg(Bool())
 
     /* Hardware Performance Counter: number of load requests */
-    val hpc_ops_load = Reg(UInt(16.W)) 
+    val hpc_ops_load = Reg(UInt(64.W)) 
 
 
 

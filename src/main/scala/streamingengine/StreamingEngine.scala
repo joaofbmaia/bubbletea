@@ -140,16 +140,16 @@ extends Module {
 		val axi_b_ready  = Output(Bool()) 
 
         /* Performance counters */
-        val hpc_ss_desc        = Output(UInt(32.W))
-        val hpc_lmmu_commit    = Output(UInt(32.W))
-        val hpc_lmmu_stall     = Output(UInt(32.W))
-        val hpc_lmmu_stall_lf  = Output(UInt(32.W))
-        val hpc_lmmu_stall_lrq = Output(UInt(32.W))
-        val hpc_lmmu_stall_llb = Output(UInt(32.W))
-        val hpc_smmu_commit    = Output(UInt(32.W))
-        val hpc_smmu_stall     = Output(UInt(32.W))
-        val hpc_ops_load       = Output(UInt(16.W))
-        val hpc_ops_store      = Output(UInt(16.W))
+        val hpc_ss_desc        = Output(UInt(64.W))
+        val hpc_lmmu_commit    = Output(UInt(64.W))
+        val hpc_lmmu_stall     = Output(UInt(64.W))
+        val hpc_lmmu_stall_lf  = Output(UInt(64.W))
+        val hpc_lmmu_stall_lrq = Output(UInt(64.W))
+        val hpc_lmmu_stall_llb = Output(UInt(64.W))
+        val hpc_smmu_commit    = Output(UInt(64.W))
+        val hpc_smmu_stall     = Output(UInt(64.W))
+        val hpc_ops_load       = Output(UInt(64.W))
+        val hpc_ops_store      = Output(UInt(64.W))
         
     })
 

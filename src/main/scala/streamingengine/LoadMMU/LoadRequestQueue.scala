@@ -128,7 +128,7 @@ extends Module {
         val data_llb_in_valid    = Input(Bool())   
 
         /* Performance counters */
-        val hpc_lmmu_stall_llb = Output(UInt(32.W))                 
+        val hpc_lmmu_stall_llb = Output(UInt(64.W))                 
 
     })
 
@@ -156,7 +156,7 @@ extends Module {
     /* Declaring hardware performance counters regarding the
      * number of addresses received and the number of stalls
      */
-    val hpc_lmmu_stall_llb = Reg(UInt(32.W))
+    val hpc_lmmu_stall_llb = Reg(UInt(64.W))
                         
 
 
