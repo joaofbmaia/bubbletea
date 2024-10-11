@@ -136,34 +136,34 @@ class Bubbletea[T <: Data: Arithmetic](params: BubbleteaParams[T])(implicit p: P
                 RegField.r(64, ssHpc.storeStalls, RegFieldDesc("storeStalls", "Number of times the accelerator did not fire due to the store pipeline being stalled"))
             ),
             0x40 -> Seq(
-                RegField.r(32, ssHpc.se.ssDesc, RegFieldDesc("seDesc", "Number of cycles iterating higher dimensions"))
-            ),
-            0x44 -> Seq(
-                RegField.r(32, ssHpc.se.lmmuCommit, RegFieldDesc("lmmuCommit", "Number of accepted addresses by the LMMU"))
+                RegField.r(64, ssHpc.se.ssDesc, RegFieldDesc("seDesc", "Number of cycles iterating higher dimensions"))
             ),
             0x48 -> Seq(
-                RegField.r(32, ssHpc.se.lmmuStall, RegFieldDesc("lmmuStall", "Number of stalls triggered by the LMMU"))
-            ),
-            0x4C -> Seq(
-                RegField.r(32, ssHpc.se.llmuStallLf, RegFieldDesc("llmuStallLf", "Number stalls triggered by the LFIFO"))
+                RegField.r(64, ssHpc.se.lmmuCommit, RegFieldDesc("lmmuCommit", "Number of accepted addresses by the LMMU"))
             ),
             0x50 -> Seq(
-                RegField.r(32, ssHpc.se.llmuStallLrq, RegFieldDesc("llmuStallLrq", "Number stalls triggered by the LRQ"))
-            ),
-            0x54 -> Seq(
-                RegField.r(32, ssHpc.se.llmuStallLlb, RegFieldDesc("llmuStallLlb", "Number stalls triggered by the LLB"))
+                RegField.r(64, ssHpc.se.lmmuStall, RegFieldDesc("lmmuStall", "Number of stalls triggered by the LMMU"))
             ),
             0x58 -> Seq(
-                RegField.r(32, ssHpc.se.smmuCommit, RegFieldDesc("smmuCommit", "Number of accepted addresses by the SMMU"))
-            ),
-            0x5C -> Seq(
-                RegField.r(32, ssHpc.se.smmuStall, RegFieldDesc("smmuStall", "Number of stalls triggered by the SMMU"))
+                RegField.r(64, ssHpc.se.llmuStallLf, RegFieldDesc("llmuStallLf", "Number stalls triggered by the LFIFO"))
             ),
             0x60 -> Seq(
-                RegField.r(16, ssHpc.se.opsLoad, RegFieldDesc("opsLoad", "Total number of load request operations"))
+                RegField.r(64, ssHpc.se.llmuStallLrq, RegFieldDesc("llmuStallLrq", "Number stalls triggered by the LRQ"))
             ),
-            0x62 -> Seq(
-                RegField.r(16, ssHpc.se.opsStore, RegFieldDesc("opsStore", "Total number of store request operations"))
+            0x68 -> Seq(
+                RegField.r(64, ssHpc.se.llmuStallLlb, RegFieldDesc("llmuStallLlb", "Number stalls triggered by the LLB"))
+            ),
+            0x70 -> Seq(
+                RegField.r(64, ssHpc.se.smmuCommit, RegFieldDesc("smmuCommit", "Number of accepted addresses by the SMMU"))
+            ),
+            0x78 -> Seq(
+                RegField.r(64, ssHpc.se.smmuStall, RegFieldDesc("smmuStall", "Number of stalls triggered by the SMMU"))
+            ),
+            0x80 -> Seq(
+                RegField.r(64, ssHpc.se.opsLoad, RegFieldDesc("opsLoad", "Total number of load request operations"))
+            ),
+            0x88 -> Seq(
+                RegField.r(64, ssHpc.se.opsStore, RegFieldDesc("opsStore", "Total number of store request operations"))
             )
         )
 
