@@ -309,7 +309,7 @@ module LoadLineBuffer (
           for (i = 0; i < AXI_R_DATA_WIDTH / 8; i = i + 1) begin
             updated_table.bytes[load_ptr+($clog2(LLB_NUM_BYTES))'(i)] = r_data_i[8*(i+1)-1-:8];
           end
-          next_load_ptr = load_ptr ^ ($clog2(LLB_NUM_BYTES))'(AXI_R_DATA_WIDTH / 8);
+          next_load_ptr = load_ptr + ($clog2(LLB_NUM_BYTES))'(AXI_R_DATA_WIDTH / 8);
 
           // if (!half_llb_row) begin
           //   
