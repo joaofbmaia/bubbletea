@@ -45,7 +45,7 @@ module StreamState #(
     output logic [$clog2(SS_NUM_TABLES)-1:0] mmu_idx_o,
     output logic [STREAM_ID_WIDTH-1:0] mmu_stream_o,
     output logic mmu_valid_o,
-    output logic [STREAM_OFFSET_WIDTH-1:0] mmu_addr_o,
+    output logic [ADDRESS_WIDTH-1:0] mmu_addr_o,
     output logic mmu_addr_valid_o,
     output logic [1:0] mmu_width_o,
     output logic [STREAM_NUM_DIMS-1:0] mmu_completed_o,
@@ -107,7 +107,7 @@ module StreamState #(
   assign mmu_type_o = st._type;
   assign mmu_width_o = st.width;
 
-  assign mmu_addr_o = st.descriptors[0].acc_offset;
+  assign mmu_addr_o = st.descriptors[0].acc_offset[ADDRESS_WIDTH-1:0];
   assign mmu_addr_valid_o = st.active_dim[0] && $signed(
       st.descriptors[0].acc_size
   ) > 0 && $signed(
