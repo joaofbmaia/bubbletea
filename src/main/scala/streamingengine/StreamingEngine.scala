@@ -207,14 +207,14 @@ extends Module {
     io.rd_out_done := streamingEngineSv.io.rd_done_smmu_cpu
     io.rd_out_store_request_successful := streamingEngineSv.io.rd_store_request_successful_smmu_cpu
 
-    streamingEngineSv.io.rs_ready_cpu_lmmu := VecInit(io.rs_in_ready.reverse).asUInt
-    streamingEngineSv.io.rs_streamid_cpu_lmmu := VecInit(io.rs_in_streamid.reverse).asUInt
+    streamingEngineSv.io.rs_ready_cpu_lmmu := io.rs_in_ready.asUInt
+    streamingEngineSv.io.rs_streamid_cpu_lmmu := io.rs_in_streamid.asUInt
 
-    io.rs_out_valid := streamingEngineSv.io.rs_valid_lmmu_cpu.asTypeOf(io.rs_out_valid).reverse
-    io.rs_out_done := streamingEngineSv.io.rs_done_lmmu_cpu.asTypeOf(io.rs_out_done).reverse
-    io.rs_out_vecdata := streamingEngineSv.io.rs_vecdata_lmmu_cpu.asTypeOf(io.rs_out_vecdata).reverse
-    io.rs_out_predicate := streamingEngineSv.io.rs_predicate_lmmu_cpu.asTypeOf(io.rs_out_predicate).reverse
-    io.rs_out_completed := streamingEngineSv.io.rs_completed_lmmu_cpu.asTypeOf(io.rs_out_completed).reverse
+    io.rs_out_valid := streamingEngineSv.io.rs_valid_lmmu_cpu.asTypeOf(io.rs_out_valid)
+    io.rs_out_done := streamingEngineSv.io.rs_done_lmmu_cpu.asTypeOf(io.rs_out_done)
+    io.rs_out_vecdata := streamingEngineSv.io.rs_vecdata_lmmu_cpu.asTypeOf(io.rs_out_vecdata)
+    io.rs_out_predicate := streamingEngineSv.io.rs_predicate_lmmu_cpu.asTypeOf(io.rs_out_predicate)
+    io.rs_out_completed := streamingEngineSv.io.rs_completed_lmmu_cpu.asTypeOf(io.rs_out_completed)
 
     streamingEngineSv.io.aw_ready_axi_mmu := io.axi_aw_ready
     io.axi_aw_valid := streamingEngineSv.io.aw_valid_mmu_axi
