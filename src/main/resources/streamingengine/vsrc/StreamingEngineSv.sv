@@ -205,7 +205,7 @@ module StreamingEngineSv
   logic [$clog2(SS_NUM_TABLES)-1:0] idx_ss_mmu;
   logic [STREAM_ID_WIDTH-1:0] stream_ss_mmu;
   logic valid_ss_mmu;
-  logic [STREAM_OFFSET_WIDTH-1:0] addr_ss_mmu;
+  logic [ADDRESS_WIDTH-1:0] addr_ss_mmu;
   logic addr_valid_ss_mmu;
   logic [1:0] width_ss_mmu;
   logic [STREAM_NUM_DIMS-1:0] completed_ss_mmu;
