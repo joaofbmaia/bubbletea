@@ -261,7 +261,7 @@ object CommonBubbleteaParams {
     maxSimultaneousLoadMacroStreams = 4,
     maxSimultaneousStoreMacroStreams = 4, // right now this must be the same as maxSimultaneousLoadMacroStreams
     maxConfigurationInstructions = 16,
-    seMaxStreamDims = 4,
+    seMaxStreamDims = 5,
     seMaxStreamMods = 3,
     seOffsetWidth = 33,
     seStrideWidth = 32,

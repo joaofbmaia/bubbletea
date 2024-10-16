@@ -153,245 +153,108 @@ extends Module {
         
     })
 
-
-
-    /* The Streaming Engine is the combination of the
-     * Stream Configuration, the Stream State, the Stream
-     * Iterator and the Load and Store Memory Management Units
-     */
-    val SC = Module(new StreamConfiguration(
-        STREAM_NUM_DIMS, 
-        STREAM_NUM_MODS,
-        STREAM_OFFSET_WIDTH, 
-        STREAM_STRIDE_WIDTH, 
-        STREAM_SIZE_WIDTH, 
-        STREAM_ID_WIDTH))
-
-    val SS = Module(new StreamState(
-        STREAM_NUM_DIMS, 
-        STREAM_NUM_MODS,
-        SS_NUM_TABLES,
-        STREAM_OFFSET_WIDTH, 
-        STREAM_STRIDE_WIDTH, 
-        STREAM_SIZE_WIDTH, 
-        STREAM_ID_WIDTH))
-
-    val SI = Module(new StreamIterator(
-        STREAM_NUM_DIMS, 
-        STREAM_OFFSET_WIDTH, 
-        STREAM_STRIDE_WIDTH, 
-        STREAM_SIZE_WIDTH))
-
-    val LMMU = Module(new LoadMMU(
+    val streamingEngineSv = Module(new StreamingEngineSv(
         STREAM_NUM_DIMS,
+        STREAM_NUM_MODS,
+        STREAM_OFFSET_WIDTH,
+        STREAM_STRIDE_WIDTH,
+        STREAM_SIZE_WIDTH,
         STREAM_ID_WIDTH,
-        VEC_NUM_BYTES,
         LRQ_NUM_TABLES,
         LRQ_NUM_REQUESTS,
         LLB_NUM_TABLES,
         LLB_NUM_BYTES,
-        LF_NUM_TABLES,
-        LF_NUM_BYTES,
+        LMMU_NUM_VECS,
+        SMMU_NUM_ADDRESSES,
         ADDRESS_WIDTH,
+        VEC_WIDTH,
+        NUM_SRC_OPERANDS,
         AXI_R_DATA_WIDTH,
-        NUM_SRC_OPERANDS))
+        AXI_W_DATA_WIDTH,
+        MAX_NUM_LOAD_STREAMS,
+        MAX_NUM_STORE_STREAMS
+    ))
 
-    val SMMU = Module(new StoreMMU(
-        SMMU_NUM_TABLES, 
-        SMMU_NUM_ADDRESSES, 
-        STREAM_ID_WIDTH, 
-        ADDRESS_WIDTH, 
-        VEC_NUM_BYTES,
-        AXI_W_DATA_WIDTH))
+    streamingEngineSv.io.clk := clock
+    streamingEngineSv.io.ctrl_reset := io.ctrl_reset
 
+    streamingEngineSv.io.valid_cpu_sc := io.cpu_in_cfg_valid
+    streamingEngineSv.io.sta_cpu_sc := io.cpu_in_cfg_sta
+    streamingEngineSv.io.end_cpu_sc := io.cpu_in_cfg_end
+    streamingEngineSv.io.type_cpu_sc := io.cpu_in_cfg_type
+    streamingEngineSv.io.width_cpu_sc := io.cpu_in_cfg_width
+    streamingEngineSv.io.stream_cpu_sc := io.cpu_in_cfg_stream
+    streamingEngineSv.io.mod_cpu_sc := io.cpu_in_cfg_mod
+    streamingEngineSv.io.vec_cpu_sc := io.cpu_in_cfg_vectorize
+    streamingEngineSv.io.dim_offset_cpu_sc := io.cpu_in_cfg_dim_offset
+    streamingEngineSv.io.dim_stride_cpu_sc := io.cpu_in_cfg_dim_stride
+    streamingEngineSv.io.dim_size_cpu_sc := io.cpu_in_cfg_dim_size
+    streamingEngineSv.io.mod_target_cpu_sc := io.cpu_in_cfg_mod_target
+    streamingEngineSv.io.mod_behaviour_cpu_sc := io.cpu_in_cfg_mod_behaviour
+    streamingEngineSv.io.mod_displacement_cpu_sc := io.cpu_in_cfg_mod_displacement
+    streamingEngineSv.io.mod_size_cpu_sc := io.cpu_in_cfg_mod_size
 
-
-
-                            
-    /* Connecting the input ports of the declared modules
-     * to some of the declared wires
-     */	
-
-    /* Stream Configurations */
-	SC.io.ctrl_reset 			  := io.ctrl_reset
-	  
-    SC.io.cpu_in_valid 			  := io.cpu_in_cfg_valid
-    SC.io.cpu_in_sta   			  := io.cpu_in_cfg_sta
-    SC.io.cpu_in_end   			  := io.cpu_in_cfg_end
-    SC.io.cpu_in_type   		  := io.cpu_in_cfg_type
-    SC.io.cpu_in_width  		  := io.cpu_in_cfg_width
-    SC.io.cpu_in_stream 		  := io.cpu_in_cfg_stream 
-    SC.io.cpu_in_mod 			  := io.cpu_in_cfg_mod 
-    SC.io.cpu_in_vec 			  := io.cpu_in_cfg_vectorize
-    SC.io.cpu_in_dim_offset		  := io.cpu_in_cfg_dim_offset
-    SC.io.cpu_in_dim_stride 	  := io.cpu_in_cfg_dim_stride
-    SC.io.cpu_in_dim_size   	  := io.cpu_in_cfg_dim_size
-    SC.io.cpu_in_mod_target       := io.cpu_in_cfg_mod_target 
-    SC.io.cpu_in_mod_behaviour    := io.cpu_in_cfg_mod_behaviour
-    SC.io.cpu_in_mod_displacement := io.cpu_in_cfg_mod_displacement
-    SC.io.cpu_in_mod_size         := io.cpu_in_cfg_mod_size 
-
-    SC.io.se_in_ready_load		  := SS.io.cfg_out_ready && LMMU.io.cfg_out_ready
-    SC.io.se_in_ready_store		  := SS.io.cfg_out_ready && SMMU.io.cfg_out_ready
+    io.cpu_out_cfg_ready := streamingEngineSv.io.ready_sc_cpu
 
 
+    streamingEngineSv.io.rd_valid_cpu_smmu := io.rd_in_valid
+    streamingEngineSv.io.rd_streamid_cpu_smmu := io.rd_in_streamid
+    streamingEngineSv.io.rd_vecdata_cpu_smmu := io.rd_in_vecdata
+    streamingEngineSv.io.rd_predicate_cpu_smmu := io.rd_in_predicate
+
+    io.rd_out_ready := streamingEngineSv.io.rd_ready_smmu_cpu
+    io.rd_out_width := streamingEngineSv.io.rd_width_smmu_cpu
+    io.rd_out_done := streamingEngineSv.io.rd_done_smmu_cpu
+    io.rd_out_store_request_successful := streamingEngineSv.io.rd_store_request_successful_smmu_cpu
+
+    streamingEngineSv.io.rs_ready_cpu_lmmu := VecInit(io.rs_in_ready.reverse).asUInt
+    streamingEngineSv.io.rs_streamid_cpu_lmmu := VecInit(io.rs_in_streamid.reverse).asUInt
+
+    io.rs_out_valid := streamingEngineSv.io.rs_valid_lmmu_cpu.asTypeOf(io.rs_out_valid).reverse
+    io.rs_out_done := streamingEngineSv.io.rs_done_lmmu_cpu.asTypeOf(io.rs_out_done).reverse
+    io.rs_out_vecdata := streamingEngineSv.io.rs_vecdata_lmmu_cpu.asTypeOf(io.rs_out_vecdata).reverse
+    io.rs_out_predicate := streamingEngineSv.io.rs_predicate_lmmu_cpu.asTypeOf(io.rs_out_predicate).reverse
+    io.rs_out_completed := streamingEngineSv.io.rs_completed_lmmu_cpu.asTypeOf(io.rs_out_completed).reverse
+
+    streamingEngineSv.io.aw_ready_axi_mmu := io.axi_aw_ready
+    io.axi_aw_valid := streamingEngineSv.io.aw_valid_mmu_axi
+    io.axi_aw_addr := streamingEngineSv.io.aw_addr_mmu_axi
+    io.axi_aw_len := streamingEngineSv.io.aw_len_mmu_axi
+    io.axi_aw_size := streamingEngineSv.io.aw_size_mmu_axi
+    io.axi_aw_burst := streamingEngineSv.io.aw_burst_mmu_axi
+
+    streamingEngineSv.io.w_ready_axi_mmu := io.axi_w_ready
+    io.axi_w_valid := streamingEngineSv.io.w_valid_mmu_axi
+    io.axi_w_data := streamingEngineSv.io.w_data_mmu_axi
+    io.axi_w_strb := streamingEngineSv.io.w_strb_mmu_axi
+    io.axi_w_last := streamingEngineSv.io.w_last_mmu_axi
+
+    streamingEngineSv.io.b_resp_axi_mmu := io.axi_b_resp
+    streamingEngineSv.io.b_valid_axi_mmu := io.axi_b_valid
+    io.axi_b_ready := streamingEngineSv.io.b_ready_mmu_axi
+
+    streamingEngineSv.io.ar_ready_axi_mmu := io.axi_ar_ready
+    io.axi_ar_addr := streamingEngineSv.io.ar_addr_mmu_axi
+    io.axi_ar_valid := streamingEngineSv.io.ar_valid_mmu_axi
+    io.axi_ar_len := streamingEngineSv.io.ar_len_mmu_axi
+    io.axi_ar_size := streamingEngineSv.io.ar_size_mmu_axi
+    io.axi_ar_burst := streamingEngineSv.io.ar_burst_mmu_axi
+
+    streamingEngineSv.io.r_data_axi_mmu := io.axi_r_data
+    streamingEngineSv.io.r_valid_axi_mmu := io.axi_r_valid
+    streamingEngineSv.io.r_last_axi_mmu := io.axi_r_last
+    streamingEngineSv.io.r_resp_axi_mmu := io.axi_r_resp
+    io.axi_r_ready := streamingEngineSv.io.r_ready_mmu_axi
 
 
-
-    /* Stream State */
-	SS.io.ctrl_reset  	  	   := io.ctrl_reset
-
-	SS.io.cfg_in_ack     	   := SC.io.se_out_ack
-    SS.io.cfg_in_we 	  	   := SC.io.se_out_cfg_we
-    SS.io.cfg_in_width   	   := SC.io.se_out_cfg_width
-    SS.io.cfg_in_stream  	   := SC.io.se_out_cfg_stream
-    SS.io.cfg_in_type    	   := SC.io.se_out_cfg_type
-    SS.io.cfg_vec_we     	   := SC.io.se_out_vec_we
-    SS.io.cfg_vec_idx    	   := SC.io.se_out_vec_idx
-    SS.io.cfg_dim_we     	   := SC.io.se_out_dim_we 
-    SS.io.cfg_dim_idx    	   := SC.io.se_out_dim_idx
-    SS.io.cfg_dim_offset 	   := SC.io.se_out_dim_offset
-    SS.io.cfg_dim_stride 	   := SC.io.se_out_dim_stride
-    SS.io.cfg_dim_size         := SC.io.se_out_dim_size
-    SS.io.cfg_mod_we           := SC.io.se_out_mod_we
-    SS.io.cfg_mod_idx          := SC.io.se_out_mod_idx 
-    SS.io.cfg_mod_target       := SC.io.se_out_mod_target 
-    SS.io.cfg_mod_behaviour    := SC.io.se_out_mod_behaviour
-    SS.io.cfg_mod_displacement := SC.io.se_out_mod_displacement 
-    SS.io.cfg_mod_size         := SC.io.se_out_mod_size
-    SS.io.cfg_in_lmmu_idx      := LMMU.io.cfg_out_mmu_idx
-    SS.io.cfg_in_smmu_idx      := SMMU.io.cfg_out_mmu_idx
-
-    SS.io.si_in_iterations    := SI.io.res_iterations
-    SS.io.si_in_accumulation  := SI.io.res_accumulation
-    SS.io.si_in_last  	 	  := SI.io.val_last
-    SS.io.si_in_load_ena      := SI.io.load_ena
-    SS.io.si_in_load_dim      := SI.io.load_dim
-
-	SS.io.mmu_in_trigger  	  := (!SS.io.mmu_out_type && SMMU.io.ss_out_trigger) || (SS.io.mmu_out_type && LMMU.io.ss_out_trigger)
-
-
-
-
-
-    /* Stream Iterator */
-    SI.io.src_op1       := SS.io.si_out_op1
-    SI.io.src_op2       := SS.io.si_out_op2
-    
-    SI.io.val_mod        := SS.io.si_out_mod
-    SI.io.val_dim        := SS.io.si_out_dim
-    SI.io.val_width      := SS.io.si_out_width
-    SI.io.val_behaviour  := SS.io.si_out_behaviour
-    SI.io.val_iterations := SS.io.si_out_iterations
-    SI.io.val_size       := SS.io.si_out_size
-    SI.io.val_completed  := SS.io.si_out_completed
-    SI.io.val_configured := SS.io.si_out_configured
-
-
-
-
-
-    /* Load Memory Management Unit */
-    LMMU.io.ctrl_reset       := io.ctrl_reset
-    
-    LMMU.io.cfg_in_we        := SC.io.se_out_cfg_we && SC.io.se_out_cfg_type
-    LMMU.io.cfg_in_stream    := SC.io.se_out_cfg_stream
-    LMMU.io.cfg_in_width     := SC.io.se_out_cfg_width
-
-    LMMU.io.ss_in_mmu_idx    := SS.io.mmu_out_mmu_idx
-    LMMU.io.ss_in_valid      := SS.io.mmu_out_valid && SS.io.mmu_out_type
-    LMMU.io.ss_in_addr       := SS.io.mmu_out_addr
-    LMMU.io.ss_in_addr_valid := SS.io.mmu_out_addr_valid && SS.io.mmu_out_type
-    LMMU.io.ss_in_width      := SS.io.mmu_out_width
-    LMMU.io.ss_in_completed  := SS.io.mmu_out_completed
-    LMMU.io.ss_in_vectorize  := SS.io.mmu_out_vectorize
-    LMMU.io.ss_in_last       := SS.io.mmu_out_last
-
-    LMMU.io.rs_in_ready      := io.rs_in_ready
-    LMMU.io.rs_in_streamid   := io.rs_in_streamid
-
-    LMMU.io.axi_ar_ready     := io.axi_ar_ready
-    LMMU.io.axi_r_data       := io.axi_r_data
-    LMMU.io.axi_r_valid      := io.axi_r_valid
-    LMMU.io.axi_r_last       := io.axi_r_last
-    LMMU.io.axi_r_resp       := io.axi_r_resp
-
-
-
-
-
-    /* Store Memory Management Unit */
-    SMMU.io.ctrl_reset       := io.ctrl_reset
-
-    SMMU.io.cfg_in_we        := SC.io.se_out_cfg_we && !SC.io.se_out_cfg_type 
-    SMMU.io.cfg_in_stream    := SC.io.se_out_cfg_stream
-    SMMU.io.cfg_in_width     := SC.io.se_out_cfg_width
-
-    SMMU.io.rd_in_valid      := io.rd_in_valid 
-    SMMU.io.rd_in_streamid   := io.rd_in_streamid
-    SMMU.io.rd_in_vecdata    := io.rd_in_vecdata
-    SMMU.io.rd_in_predicate  := io.rd_in_predicate
-
-    SMMU.io.ss_in_mmu_idx    := SS.io.mmu_out_mmu_idx
-    SMMU.io.ss_in_addr       := SS.io.mmu_out_addr
-    SMMU.io.ss_in_addr_valid := SS.io.mmu_out_addr_valid && !SS.io.mmu_out_type
-	SMMU.io.ss_in_last       := SS.io.mmu_out_last
-
-    SMMU.io.axi_aw_ready     := io.axi_aw_ready
-    SMMU.io.axi_w_ready      := io.axi_w_ready
-    SMMU.io.axi_b_resp       := io.axi_b_resp
-    SMMU.io.axi_b_valid      := io.axi_b_valid
-
-
-
-
-
-    /* Connecting the output ports of the module to
-     * some of the internal wires
-     */
-	io.cpu_out_cfg_ready := SC.io.cpu_out_ready
-
-    io.rs_out_valid     := LMMU.io.rs_out_valid
-    io.rs_out_done      := LMMU.io.rs_out_done
-    io.rs_out_vecdata   := LMMU.io.rs_out_vecdata
-    io.rs_out_predicate := LMMU.io.rs_out_predicate
-    io.rs_out_completed := LMMU.io.rs_out_completed
-
-    io.rd_out_ready := SMMU.io.rd_out_ready
-    io.rd_out_width := SMMU.io.rd_out_width
-    io.rd_out_done  := SMMU.io.rd_out_done
-    io.rd_out_store_request_successful := SMMU.io.rd_out_store_request_successful
-
-    io.axi_ar_addr  := LMMU.io.axi_ar_addr
-    io.axi_ar_valid := LMMU.io.axi_ar_valid
-    io.axi_ar_len   := LMMU.io.axi_ar_len
-    io.axi_ar_size  := LMMU.io.axi_ar_size
-    io.axi_ar_burst := LMMU.io.axi_ar_burst
-
-    io.axi_r_ready  := LMMU.io.axi_r_ready
-
-	io.axi_aw_valid := SMMU.io.axi_aw_valid
-	io.axi_aw_addr  := SMMU.io.axi_aw_addr
-    io.axi_aw_len   := SMMU.io.axi_aw_len
-    io.axi_aw_size  := SMMU.io.axi_aw_size
-    io.axi_aw_burst := SMMU.io.axi_aw_burst
-	
-	io.axi_w_valid  := SMMU.io.axi_w_valid
-	io.axi_w_data   := SMMU.io.axi_w_data
-	io.axi_w_strb   := SMMU.io.axi_w_strb
-    io.axi_w_last   := SMMU.io.axi_w_last
-
-    io.axi_b_ready  := SMMU.io.axi_b_ready
-
-    io.hpc_ss_desc        := SS.io.hpc_ss_desc
-    io.hpc_lmmu_commit    := LMMU.io.hpc_lmmu_commit
-    io.hpc_lmmu_stall     := LMMU.io.hpc_lmmu_stall
-    io.hpc_lmmu_stall_lf  := LMMU.io.hpc_lmmu_stall_lf
-    io.hpc_lmmu_stall_lrq := LMMU.io.hpc_lmmu_stall_lrq
-    io.hpc_lmmu_stall_llb := LMMU.io.hpc_lmmu_stall_llb
-    io.hpc_smmu_commit    := SMMU.io.hpc_smmu_commit
-    io.hpc_smmu_stall     := SMMU.io.hpc_smmu_stall
-    io.hpc_ops_load       := LMMU.io.hpc_ops_load
-    io.hpc_ops_store      := SMMU.io.hpc_ops_store 
-
+    io.hpc_ss_desc := streamingEngineSv.io.hpc_ss_desc
+    io.hpc_lmmu_commit := streamingEngineSv.io.hpc_lmmu_commit
+    io.hpc_lmmu_stall := streamingEngineSv.io.hpc_lmmu_stall
+    io.hpc_lmmu_stall_lf := streamingEngineSv.io.hpc_lmmu_stall_lf
+    io.hpc_lmmu_stall_lrq := streamingEngineSv.io.hpc_lmmu_stall_lrq
+    io.hpc_lmmu_stall_llb := streamingEngineSv.io.hpc_lmmu_stall_llb
+    io.hpc_smmu_commit := streamingEngineSv.io.hpc_smmu_commit
+    io.hpc_smmu_stall := streamingEngineSv.io.hpc_smmu_stall
+    io.hpc_ops_load := streamingEngineSv.io.hpc_ops_load
+    io.hpc_ops_store := streamingEngineSv.io.hpc_ops_store
 }
