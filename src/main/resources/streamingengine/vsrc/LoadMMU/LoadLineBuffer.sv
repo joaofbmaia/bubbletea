@@ -203,9 +203,10 @@ module LoadLineBuffer (
    * but not yet valid table. The selected table will initiate
    * a load request to the data memory
    */
+  genvar k;
   generate
-    for (genvar i = 0; i < LLB_NUM_TABLES; i++) begin
-      assign arbiter_dm_input[i] = llb_tables[i]._config && !llb_tables[i].valid;
+    for (k = 0; k < LLB_NUM_TABLES; k++) begin
+      assign arbiter_dm_input[k] = llb_tables[k]._config && !llb_tables[k].valid;
     end
   endgenerate
 

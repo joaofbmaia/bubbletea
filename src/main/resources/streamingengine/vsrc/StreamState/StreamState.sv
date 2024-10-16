@@ -264,9 +264,11 @@ module StreamState #(
     end
   end
 
-  for (genvar i = 0; i < STREAM_NUM_DIMS; i++) begin
-    assign si_completed_o[i]  = st.descriptors[i].complete;
-    assign si_configured_o[i] = st.descriptors[i].configured;
+  genvar k;
+
+  for (k = 0; k < STREAM_NUM_DIMS; k++) begin
+    assign si_completed_o[k]  = st.descriptors[k].complete;
+    assign si_configured_o[k] = st.descriptors[k].configured;
   end
 
 

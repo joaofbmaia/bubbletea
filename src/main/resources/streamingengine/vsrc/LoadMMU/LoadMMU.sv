@@ -119,10 +119,10 @@ module LoadMMU
 
   always_ff @(posedge clk_i or posedge ctrl_reset_i) begin
     if (ctrl_reset_i) begin
-      hpc_lmmu_stall_lf_o <= 32'b0;
-      hpc_lmmu_stall_lrq_o <= 32'b0;
-      hpc_lmmu_stall_o <= 32'b0;
-      hpc_lmmu_commit_o <= 32'b0;
+      hpc_lmmu_stall_lf_o <= 64'b0;
+      hpc_lmmu_stall_lrq_o <= 64'b0;
+      hpc_lmmu_stall_o <= 64'b0;
+      hpc_lmmu_commit_o <= 64'b0;
     end else begin
       hpc_lmmu_stall_lf_o <= hpc_lf_stall;
       hpc_lmmu_stall_lrq_o <= hpc_lrq_stall;

@@ -69,10 +69,10 @@ module StreamTables #(
   logic [SS_NUM_TABLES-1:0] arbiter_inputs;
   logic mmu_trigger;
 
-  
+
   always_comb begin
-    empty_table_idx = 0;
-    cfg_empty_ready = 0;
+    empty_table_idx  = 0;
+    cfg_empty_ready  = 0;
 
     append_table_idx = 0;
     cfg_append_ready = 0;
@@ -127,9 +127,10 @@ module StreamTables #(
     end
   end
 
+  genvar k;
 
-  for (genvar i = 0; i < SS_NUM_TABLES; i++) begin
-    assign arbiter_inputs[i] = tables[i].ready;
+  for (k = 0; k < SS_NUM_TABLES; k++) begin
+    assign arbiter_inputs[k] = tables[k].ready;
   end
 
   RoundRobinArbiter #(

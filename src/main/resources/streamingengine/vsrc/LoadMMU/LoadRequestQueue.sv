@@ -127,7 +127,7 @@ module LoadRequestQueue
       end
 
 
-      hpc_lmmu_stall_llb_o <= 32'b0;
+      hpc_lmmu_stall_llb_o <= 64'b0;
     end else begin
       if (ss_addr_valid_i && lf_ready_i) begin
         if (nr_free_table_valid) begin
