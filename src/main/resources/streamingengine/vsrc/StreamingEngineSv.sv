@@ -72,7 +72,7 @@ module StreamingEngineSv
     /* AXI Write Address Channel */
     input logic aw_ready_axi_mmu,
     output logic aw_valid_mmu_axi,
-    output logic [STREAM_ADDR_WIDTH-1:0] aw_addr_mmu_axi,
+    output logic [AXI_ADDR_WIDTH-1:0] aw_addr_mmu_axi,
     output logic [AXI_LEN_WIDTH-1:0] aw_len_mmu_axi,
     output logic [AXI_SIZE_WIDTH-1:0] aw_size_mmu_axi,
     output logic [AXI_BURST_WIDTH-1:0] aw_burst_mmu_axi,
