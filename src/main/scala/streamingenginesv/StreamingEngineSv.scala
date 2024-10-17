@@ -1,9 +1,8 @@
 package streamingenginesv
 
 import chisel3._
-import chisel3.util.HasBlackBoxResource
+import chisel3.util.{HasBlackBoxResource, HasBlackBoxInline}
 import freechips.rocketchip.util.ElaborationArtefacts
-import chisel3.util.HasBlackBoxPath
 import java.io.FileWriter
 
 class StreamingEngineSv(
@@ -26,7 +25,7 @@ class StreamingEngineSv(
     val AXI_W_DATA_WIDTH:      Int,
     val MAX_NUM_LOAD_STREAMS:  Int,
     val MAX_NUM_STORE_STREAMS: Int)
-extends BlackBox with HasBlackBoxResource with HasBlackBoxPath {
+extends BlackBox with HasBlackBoxResource with HasBlackBoxInline {
   /* Internal parameters, calculated using external ones */
   val VEC_NUM_BYTES   = VEC_WIDTH / 8
   val SS_NUM_TABLES   = MAX_NUM_LOAD_STREAMS + MAX_NUM_STORE_STREAMS
@@ -140,16 +139,7 @@ extends BlackBox with HasBlackBoxResource with HasBlackBoxPath {
 
   externalParametersPackageContent.append(s"endpackage\n")
 
-  // Write the external parameters package file
-  val chipyardDir = System.getProperty("user.dir")
-  val seVsrcDir = s"$chipyardDir/generators/bubbletea/src/main/resources/streamingenginesv/vsrc"
-  val fileName = s"$seVsrcDir/auto_external_params_pkg.sv"
-
-  val file = new FileWriter(fileName)
-  file.write(externalParametersPackageContent.toString())
-  file.close()
-
-  addPath(fileName)
+  setInline("auto_external_params_pkg.sv", externalParametersPackageContent.toString())
 
   addResource("/streamingenginesv/vsrc/StreamingEngineSv.sv")
   addResource("/streamingenginesv/vsrc/engine_pkg.sv")
