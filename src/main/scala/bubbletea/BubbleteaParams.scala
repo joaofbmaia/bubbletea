@@ -15,6 +15,7 @@ trait BubbleteaParams[T <: Data] {
 
   val maxConfigurationInstructions : Int // = (params.seMaxNumLoadStreams + params.seMaxNumStoreStreams) * (params.seMaxStreamDims + params.seMaxStreamMods + 1 /*for the cgf.vec instruction*/)
 
+  val seUseSvBlackBox: Boolean
   val seMaxStreamDims: Int
   val seMaxStreamMods: Int
   val seOffsetWidth: Int
@@ -71,6 +72,7 @@ case class UIntBubbleteaParams(
 
   maxConfigurationInstructions : Int, // = (params.seMaxNumLoadStreams + params.seMaxNumStoreStreams) * (params.seMaxStreamDims + params.seMaxStreamMods + 1 /*for the cgf.vec instruction*/)
 
+  seUseSvBlackBox: Boolean,
   seMaxStreamDims: Int,
   seMaxStreamMods: Int,
   seOffsetWidth: Int,
@@ -105,6 +107,7 @@ case class SIntBubbleteaParams(
 
   maxConfigurationInstructions : Int, // = (params.seMaxNumLoadStreams + params.seMaxNumStoreStreams) * (params.seMaxStreamDims + params.seMaxStreamMods + 1 /*for the cgf.vec instruction*/)
 
+  seUseSvBlackBox: Boolean,
   seMaxStreamDims: Int,
   seMaxStreamMods: Int,
   seOffsetWidth: Int,
@@ -139,6 +142,7 @@ case class FloatBubbleteaParams(
 
   maxConfigurationInstructions : Int, // = (params.seMaxNumLoadStreams + params.seMaxNumStoreStreams) * (params.seMaxStreamDims + params.seMaxStreamMods + 1 /*for the cgf.vec instruction*/)
 
+  seUseSvBlackBox: Boolean,
   seMaxStreamDims: Int,
   seMaxStreamMods: Int,
   seOffsetWidth: Int,
@@ -171,6 +175,7 @@ object CommonBubbleteaParams {
     maxSimultaneousLoadMacroStreams = 4,
     maxSimultaneousStoreMacroStreams = 2,
     maxConfigurationInstructions = 16,
+    seUseSvBlackBox= false,
     seMaxStreamDims = 4,
     seMaxStreamMods = 3,
     seOffsetWidth = 33,
@@ -201,6 +206,7 @@ object CommonBubbleteaParams {
     maxSimultaneousLoadMacroStreams = 2,
     maxSimultaneousStoreMacroStreams = 2,
     maxConfigurationInstructions = 16,
+    seUseSvBlackBox= false,
     seMaxStreamDims = 4,
     seMaxStreamMods = 3,
     seOffsetWidth = 33,
@@ -231,6 +237,7 @@ object CommonBubbleteaParams {
     maxSimultaneousLoadMacroStreams = 4,
     maxSimultaneousStoreMacroStreams = 4, // right now this must be the same as maxSimultaneousLoadMacroStreams
     maxConfigurationInstructions = 16,
+    seUseSvBlackBox= false,
     seMaxStreamDims = 4,
     seMaxStreamMods = 3,
     seOffsetWidth = 33,
@@ -261,6 +268,7 @@ object CommonBubbleteaParams {
     maxSimultaneousLoadMacroStreams = 4,
     maxSimultaneousStoreMacroStreams = 4, // right now this must be the same as maxSimultaneousLoadMacroStreams
     maxConfigurationInstructions = 16,
+    seUseSvBlackBox= true,
     seMaxStreamDims = 5,
     seMaxStreamMods = 3,
     seOffsetWidth = 33,
@@ -291,6 +299,7 @@ object CommonBubbleteaParams {
     maxSimultaneousLoadMacroStreams = 4,
     maxSimultaneousStoreMacroStreams = 4, // right now this must be the same as maxSimultaneousLoadMacroStreams
     maxConfigurationInstructions = 24,
+    seUseSvBlackBox= false,
     seMaxStreamDims = 5,
     seMaxStreamMods = 3,
     seOffsetWidth = 33,
@@ -321,6 +330,7 @@ object CommonBubbleteaParams {
     maxSimultaneousLoadMacroStreams = 4,
     maxSimultaneousStoreMacroStreams = 4, // right now this must be the same as maxSimultaneousLoadMacroStreams
     maxConfigurationInstructions = 16,
+    seUseSvBlackBox= false,
     seMaxStreamDims = 4,
     seMaxStreamMods = 3,
     seOffsetWidth = 33,
@@ -351,6 +361,7 @@ object CommonBubbleteaParams {
     maxSimultaneousLoadMacroStreams = 4,
     maxSimultaneousStoreMacroStreams = 4, // right now this must be the same as maxSimultaneousLoadMacroStreams
     maxConfigurationInstructions = 16,
+    seUseSvBlackBox= false,
     seMaxStreamDims = 4,
     seMaxStreamMods = 3,
     seOffsetWidth = 33,
@@ -381,6 +392,7 @@ object CommonBubbleteaParams {
     maxSimultaneousLoadMacroStreams = 4,
     maxSimultaneousStoreMacroStreams = 4, // right now this must be the same as maxSimultaneousLoadMacroStreams
     maxConfigurationInstructions = 16,
+    seUseSvBlackBox= false,
     seMaxStreamDims = 4,
     seMaxStreamMods = 3,
     seOffsetWidth = 33,
@@ -411,6 +423,7 @@ object CommonBubbleteaParams {
     maxSimultaneousLoadMacroStreams = 4,
     maxSimultaneousStoreMacroStreams = 4, // right now this must be the same as maxSimultaneousLoadMacroStreams
     maxConfigurationInstructions = 16,
+    seUseSvBlackBox= false,
     seMaxStreamDims = 4,
     seMaxStreamMods = 3,
     seOffsetWidth = 33,
@@ -441,6 +454,7 @@ object CommonBubbleteaParams {
     maxSimultaneousLoadMacroStreams = 4,
     maxSimultaneousStoreMacroStreams = 4, // right now this must be the same as maxSimultaneousLoadMacroStreams
     maxConfigurationInstructions = 16,
+    seUseSvBlackBox= false,
     seMaxStreamDims = 4,
     seMaxStreamMods = 3,
     seOffsetWidth = 33,
@@ -471,6 +485,7 @@ object CommonBubbleteaParams {
     maxSimultaneousLoadMacroStreams = 4,
     maxSimultaneousStoreMacroStreams = 4, // right now this must be the same as maxSimultaneousLoadMacroStreams
     maxConfigurationInstructions = 16,
+    seUseSvBlackBox= false,
     seMaxStreamDims = 4,
     seMaxStreamMods = 3,
     seOffsetWidth = 33,
