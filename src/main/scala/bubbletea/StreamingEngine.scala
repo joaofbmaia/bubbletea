@@ -63,7 +63,7 @@ class StreamingEngine[T <: Data](params: BubbleteaParams[T], socParams: SocParam
 
   // Instantiate the streaming engine
   val streamingEngineImpl = Module(
-    new streamingengine.StreamingEngine(
+    new streamingenginesv.StreamingEngine(
       STREAM_NUM_DIMS = params.seMaxStreamDims,
       STREAM_NUM_MODS = params.seMaxStreamMods,
       STREAM_OFFSET_WIDTH = params.seOffsetWidth,

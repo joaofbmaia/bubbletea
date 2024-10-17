@@ -1,4 +1,4 @@
-package streamingengine
+package streamingenginesv
 
 import chisel3._
 import chisel3.util.HasBlackBoxResource
@@ -142,7 +142,7 @@ extends BlackBox with HasBlackBoxResource with HasBlackBoxPath {
 
   // Write the external parameters package file
   val chipyardDir = System.getProperty("user.dir")
-  val seVsrcDir = s"$chipyardDir/generators/bubbletea/src/main/resources/streamingengine/vsrc"
+  val seVsrcDir = s"$chipyardDir/generators/bubbletea/src/main/resources/streamingenginesv/vsrc"
   val fileName = s"$seVsrcDir/auto_external_params_pkg.sv"
 
   val file = new FileWriter(fileName)
@@ -151,16 +151,16 @@ extends BlackBox with HasBlackBoxResource with HasBlackBoxPath {
 
   addPath(fileName)
 
-  addResource("/streamingengine/vsrc/StreamingEngineSv.sv")
-  addResource("/streamingengine/vsrc/engine_pkg.sv")
-  addResource("/streamingengine/vsrc/StreamConfigurator/StreamConfigurator.sv")
-  addResource("/streamingengine/vsrc/StreamState/StreamState.sv")
-  addResource("/streamingengine/vsrc/StreamState/StreamTables.sv")
-  addResource("/streamingengine/vsrc/StreamIterator/StreamIterator.sv")
-  addResource("/streamingengine/vsrc/Arbiter/RoundRobinArbiter.sv")
-  addResource("/streamingengine/vsrc/LoadMMU/LoadFIFO.sv")
-  addResource("/streamingengine/vsrc/LoadMMU/LoadLineBuffer.sv")
-  addResource("/streamingengine/vsrc/LoadMMU/LoadMMU.sv")
-  addResource("/streamingengine/vsrc/LoadMMU/LoadRequestQueue.sv")
-  addResource("/streamingengine/vsrc/StoreMMU/StoreMMU.sv")
+  addResource("/streamingenginesv/vsrc/StreamingEngineSv.sv")
+  addResource("/streamingenginesv/vsrc/engine_pkg.sv")
+  addResource("/streamingenginesv/vsrc/StreamConfigurator/StreamConfigurator.sv")
+  addResource("/streamingenginesv/vsrc/StreamState/StreamState.sv")
+  addResource("/streamingenginesv/vsrc/StreamState/StreamTables.sv")
+  addResource("/streamingenginesv/vsrc/StreamIterator/StreamIterator.sv")
+  addResource("/streamingenginesv/vsrc/Arbiter/RoundRobinArbiter.sv")
+  addResource("/streamingenginesv/vsrc/LoadMMU/LoadFIFO.sv")
+  addResource("/streamingenginesv/vsrc/LoadMMU/LoadLineBuffer.sv")
+  addResource("/streamingenginesv/vsrc/LoadMMU/LoadMMU.sv")
+  addResource("/streamingenginesv/vsrc/LoadMMU/LoadRequestQueue.sv")
+  addResource("/streamingenginesv/vsrc/StoreMMU/StoreMMU.sv")
 }
