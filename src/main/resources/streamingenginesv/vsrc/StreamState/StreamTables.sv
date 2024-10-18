@@ -14,7 +14,7 @@ module StreamTables #(
     input logic end_ack_i,     // End of Configuration Acknowledgement
 
     // Initial Stream Config
-    input logic [$clog2(STREAM_NUM_DIMS)-1:0] width_i,
+    input logic [1:0] width_i,
     input logic [STREAM_ID_WIDTH-1:0] stream_i,
     input stream_type_t type_i,
     input logic vec_we_i,
