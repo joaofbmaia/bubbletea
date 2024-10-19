@@ -68,8 +68,8 @@ module StreamConfigurator
   sc_dim_descriptor_t [STREAM_NUM_DIMS-1:0] dims_reg, next_dims;
   sc_mod_descriptor_t [MAX_NUM_MODS-1:0] mods_reg, next_mods;
 
-  logic [STREAM_NUM_DIMS-1:0] write_dim, next_write_dim;
-  logic [MAX_NUM_MODS-1:0] write_mod, next_write_mod;
+  logic [STREAM_NUM_DIMS:0] write_dim, next_write_dim;
+  logic [MAX_NUM_MODS:0] write_mod, next_write_mod;
 
   logic [1:0] width_reg, next_width;
   logic [STREAM_ID_WIDTH-1:0] stream_reg, next_stream;
@@ -209,12 +209,12 @@ module StreamConfigurator
   //                         (state == COMMIT)  ? (write_dim[0] && write_mod[0] ? _CONFIG : COMMIT) :
   //                         _CONFIG;
 
-  assign next_write_dim = (state == _CONFIG) ? (cpu_valid_i && !cpu_vec_i && !cpu_mod_i ? {write_dim[STREAM_NUM_DIMS-2:0], 1'b0} : write_dim) :
-                          (state == COMMIT)  ? (!write_dim[0] ? {1'b0, write_dim[STREAM_NUM_DIMS-1:1]} : write_dim) :           //Update the descriptor points as the information is being transfered to the Stream State
+  assign next_write_dim = (state == _CONFIG) ? (cpu_valid_i && !cpu_vec_i && !cpu_mod_i ? {write_dim[STREAM_NUM_DIMS-1:0], 1'b0} : write_dim) :
+                          (state == COMMIT)  ? (!write_dim[0] ? {1'b0, write_dim[STREAM_NUM_DIMS:1]} : write_dim) :           //Update the descriptor points as the information is being transfered to the Stream State
                           write_dim;
 
-  assign next_write_mod = (state == _CONFIG) ? (cpu_valid_i && !cpu_vec_i && cpu_mod_i ? {write_mod[MAX_NUM_MODS-2:0], 1'b0} : write_mod) :
-                          (state == COMMIT)  ? (!write_mod[0] ? {1'b0, write_mod[MAX_NUM_MODS-1:1]} : write_mod) :
+  assign next_write_mod = (state == _CONFIG) ? (cpu_valid_i && !cpu_vec_i && cpu_mod_i ? {write_mod[MAX_NUM_MODS-1:0], 1'b0} : write_mod) :
+                          (state == COMMIT)  ? (!write_mod[0] ? {1'b0, write_mod[MAX_NUM_MODS:1]} : write_mod) :
                           write_mod;
 
 

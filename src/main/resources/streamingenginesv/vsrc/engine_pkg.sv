@@ -28,6 +28,8 @@ package engine_pkg;
 
   ///////////////////////////////////////////////////
 
+  localparam NB_STORE_BURST_BEATS = 4;
+
   /* Internal parameters, calculated using external ones */
   localparam VEC_NUM_BYTES = VEC_WIDTH / 8;  // 16
 

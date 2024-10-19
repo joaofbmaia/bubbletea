@@ -120,6 +120,8 @@ module StoreMMU
   logic [AXI_W_TAG_WIDTH-1:0] next_addr_tag;
   logic [AXI_W_OFFSET_WIDTH-1:0] next_addr_offset;
 
+  int burst_sim, next_burst_sim;
+
 
 
 
@@ -449,6 +451,8 @@ module StoreMMU
 
 
   always_comb begin
+    next_burst_sim = burst_sim;
+
     next_state = store_state;
 
     store_fifo_entry = store_fifo_table[store_sel_idx];
@@ -474,7 +478,19 @@ module StoreMMU
       WAIT_PAIR: begin
         if (next_addr_valid && next_data_valid) begin
           if (buffer_valid && buffer_addr_tag != next_addr_tag) begin
-            next_state = WAIT_AWREADY;
+            if(burst_sim == NB_STORE_BURST_BEATS) begin
+              next_burst_sim = 0;
+
+              next_state = WAIT_AWREADY;
+            end else begin
+              next_buffer_data = '0;
+              next_buffer_strb = '0;
+              next_buffer_addr_tag = 0;
+              next_buffer_valid = 0;
+
+              next_burst_sim = burst_sim + 1;
+              next_state = WAIT_PAIR;
+            end
           end else begin
             /* Update the address and valid registers in case it is a new configuration */
             next_buffer_addr_tag = next_addr_tag;

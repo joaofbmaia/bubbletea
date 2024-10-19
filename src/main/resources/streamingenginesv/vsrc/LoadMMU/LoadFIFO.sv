@@ -406,7 +406,7 @@ module LoadFIFO
      */
     if (data_lrq_valid_i) begin
       for (int i = 0; i < 2 ** data_lrq_width_i; i++) begin
-        req_data[req_idx_byte+4'(i)]  = data_llb_bytes_i[data_lrq_offset_llb_i+4'(i)];
+        req_data[req_idx_byte+4'(i)]  = data_llb_bytes_i[data_lrq_offset_llb_i+$clog2(LLB_NUM_BYTES)'(i)];
         req_valid[req_idx_byte+4'(i)] = 1;
       end
     end
