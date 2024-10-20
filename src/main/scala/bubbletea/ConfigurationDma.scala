@@ -93,6 +93,9 @@ class ConfigurationDma[T <: Data: Arithmetic](params: BubbleteaParams[T], socPar
     val seiMemory = SyncReadMem(seiNumBursts, new StreamingEngineCompressedConfigurationChannelBundle(params))
     val seiBeatsLeft = Reg(UInt(log2Ceil(seiBeatsPerBurst + 1).W))
 
+    val seiWriteDataBits = WireInit(if (seiBeatsBuffer.getWidth > 0) mem.d.bits.data ## seiBeatsBuffer.asUInt else mem.d.bits.data)
+    val seiWriteData = WireInit(seiWriteDataBits.asTypeOf(new StreamingEngineCompressedConfigurationChannelBundle(params)))
+
 
     val scBaseAddress = WireInit(io.configurationBaseAddress + (new BitstreamBundle[T](params, socParams)).streamingEngineInstructions.getWidth.U / 8.U + (new BitstreamBundle[T](params, socParams)).padding0.getWidth.U / 8.U)
 
@@ -167,7 +170,7 @@ class ConfigurationDma[T <: Data: Arithmetic](params: BubbleteaParams[T], socPar
               seiBeatsLeft := seiBeatsLeft - 1.U
             } .elsewhen(seiBeatsLeft === 1.U) {
               // This is the last beat
-              seiMemory.write((seiNumBursts.U - seiBurstsLeft), (mem.d.bits.data ## seiBeatsBuffer.asUInt).asTypeOf(new StreamingEngineCompressedConfigurationChannelBundle(params)))
+              seiMemory.write((seiNumBursts.U - seiBurstsLeft), seiWriteData)
               seiBeatsLeft := seiBeatsPerBurst.U
               seiBurstsLeft := seiBurstsLeft - 1.U
             }
