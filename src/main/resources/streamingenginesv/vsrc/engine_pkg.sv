@@ -25,10 +25,9 @@ package engine_pkg;
   localparam AXI_W_DATA_WIDTH      = _AXI_W_DATA_WIDTH;
   localparam MAX_NUM_LOAD_STREAMS  = _MAX_NUM_LOAD_STREAMS;
   localparam MAX_NUM_STORE_STREAMS = _MAX_NUM_STORE_STREAMS;
+  localparam NB_STORE_BURST_BEATS  = _NB_STORE_BURST_BEATS;
 
   ///////////////////////////////////////////////////
-
-  localparam NB_STORE_BURST_BEATS = 3;
 
   /* Internal parameters, calculated using external ones */
   localparam VEC_NUM_BYTES = VEC_WIDTH / 8;  // 16

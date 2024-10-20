@@ -24,7 +24,8 @@ class StreamingEngineSv(
     val AXI_R_DATA_WIDTH:      Int,
     val AXI_W_DATA_WIDTH:      Int,
     val MAX_NUM_LOAD_STREAMS:  Int,
-    val MAX_NUM_STORE_STREAMS: Int)
+    val MAX_NUM_STORE_STREAMS: Int,
+    val NB_STORE_BURST_BEATS:  Int)
 extends BlackBox with HasBlackBoxResource with HasBlackBoxInline {
   /* Internal parameters, calculated using external ones */
   val VEC_NUM_BYTES   = VEC_WIDTH / 8
@@ -130,7 +131,8 @@ extends BlackBox with HasBlackBoxResource with HasBlackBoxInline {
     ("AXI_R_DATA_WIDTH", AXI_R_DATA_WIDTH),
     ("AXI_W_DATA_WIDTH", AXI_W_DATA_WIDTH),
     ("MAX_NUM_LOAD_STREAMS", MAX_NUM_LOAD_STREAMS),
-    ("MAX_NUM_STORE_STREAMS", MAX_NUM_STORE_STREAMS)
+    ("MAX_NUM_STORE_STREAMS", MAX_NUM_STORE_STREAMS),
+    ("NB_STORE_BURST_BEATS", NB_STORE_BURST_BEATS)
   )
 
   externalParams.foreach { case (param, value) =>

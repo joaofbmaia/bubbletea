@@ -62,6 +62,8 @@ class StreamingEngine[T <: Data](params: BubbleteaParams[T], socParams: SocParam
   })
 
   // Instantiate the streaming engine
+  // Assert size of cache line is multiple of bus size
+  assert((socParams.cacheLineBytes * 8) % socParams.frontBusDataBits == 0, "Cache Line size must be a multiple of Front Bus width")
   val streamingEngineImpl_io = if (params.seUseSvBlackBox) {
     val streamingEngineImpl = Module(new streamingenginesv.StreamingEngine(
       STREAM_NUM_DIMS = params.seMaxStreamDims,
@@ -82,7 +84,8 @@ class StreamingEngine[T <: Data](params: BubbleteaParams[T], socParams: SocParam
       AXI_R_DATA_WIDTH = socParams.frontBusDataBits,
       AXI_W_DATA_WIDTH = socParams.frontBusDataBits,
       MAX_NUM_LOAD_STREAMS = params.seMaxNumLoadStreams,
-      MAX_NUM_STORE_STREAMS = params.seMaxNumStoreStreams
+      MAX_NUM_STORE_STREAMS = params.seMaxNumStoreStreams,
+      NB_STORE_BURST_BEATS = (if (params.seHackStoreBursts) ((socParams.cacheLineBytes * 8) / socParams.frontBusDataBits) - 1 else 0)
     ))
     streamingEngineImpl.io
   } else {
@@ -105,7 +108,8 @@ class StreamingEngine[T <: Data](params: BubbleteaParams[T], socParams: SocParam
       AXI_R_DATA_WIDTH = socParams.frontBusDataBits,
       AXI_W_DATA_WIDTH = socParams.frontBusDataBits,
       MAX_NUM_LOAD_STREAMS = params.seMaxNumLoadStreams,
-      MAX_NUM_STORE_STREAMS = params.seMaxNumStoreStreams
+      MAX_NUM_STORE_STREAMS = params.seMaxNumStoreStreams,
+      NB_STORE_BURST_BEATS = (if (params.seHackStoreBursts) ((socParams.cacheLineBytes * 8) / socParams.frontBusDataBits) - 1 else 0)
     ))
     streamingEngineImpl.io
   }

@@ -12,10 +12,10 @@ trait BubbleteaParams[T <: Data] {
   val maxInitiationInterval: Int
   val maxSimultaneousLoadMacroStreams: Int
   val maxSimultaneousStoreMacroStreams : Int
-
-  val maxConfigurationInstructions : Int // = (params.seMaxNumLoadStreams + params.seMaxNumStoreStreams) * (params.seMaxStreamDims + params.seMaxStreamMods + 1 /*for the cgf.vec instruction*/)
+  val maxConfigurationInstructions : Int
 
   val seUseSvBlackBox: Boolean
+  val seHackStoreBursts: Boolean
   val seMaxStreamDims: Int
   val seMaxStreamMods: Int
   val seOffsetWidth: Int
@@ -25,13 +25,8 @@ trait BubbleteaParams[T <: Data] {
   val seLrqNumTables: Int
   val seLrqNumRequests: Int
   val seLlbNumTables: Int
-  //val seLlbNumBytes: Int // =cacheBlockBytes
   val seLmmuNumVecs: Int
   val seSmmuNumAddresses: Int
-  //val seAddressWidth: Int // =coreMaxAddrBits
-  //val seVecWidth: Int, // =macroStreamDepth
-  //val seNumSrcOperands: Int, // =maxSimultaneousLoadMacroStreams
-  //val seAxiDataWidth: Int // =beatBytes * 8
   val seMaxNumLoadStreams: Int
   val seMaxNumStoreStreams: Int
 
@@ -69,10 +64,10 @@ case class UIntBubbleteaParams(
   maxInitiationInterval: Int,
   maxSimultaneousLoadMacroStreams: Int,
   maxSimultaneousStoreMacroStreams : Int,
-
-  maxConfigurationInstructions : Int, // = (params.seMaxNumLoadStreams + params.seMaxNumStoreStreams) * (params.seMaxStreamDims + params.seMaxStreamMods + 1 /*for the cgf.vec instruction*/)
+  maxConfigurationInstructions : Int,
 
   seUseSvBlackBox: Boolean,
+  seHackStoreBursts: Boolean,
   seMaxStreamDims: Int,
   seMaxStreamMods: Int,
   seOffsetWidth: Int,
@@ -104,10 +99,10 @@ case class SIntBubbleteaParams(
   maxInitiationInterval: Int,
   maxSimultaneousLoadMacroStreams: Int,
   maxSimultaneousStoreMacroStreams : Int,
-
-  maxConfigurationInstructions : Int, // = (params.seMaxNumLoadStreams + params.seMaxNumStoreStreams) * (params.seMaxStreamDims + params.seMaxStreamMods + 1 /*for the cgf.vec instruction*/)
+  maxConfigurationInstructions : Int,
 
   seUseSvBlackBox: Boolean,
+  seHackStoreBursts: Boolean,
   seMaxStreamDims: Int,
   seMaxStreamMods: Int,
   seOffsetWidth: Int,
@@ -139,10 +134,10 @@ case class FloatBubbleteaParams(
   maxInitiationInterval: Int,
   maxSimultaneousLoadMacroStreams: Int,
   maxSimultaneousStoreMacroStreams : Int,
-
-  maxConfigurationInstructions : Int, // = (params.seMaxNumLoadStreams + params.seMaxNumStoreStreams) * (params.seMaxStreamDims + params.seMaxStreamMods + 1 /*for the cgf.vec instruction*/)
+  maxConfigurationInstructions : Int,
 
   seUseSvBlackBox: Boolean,
+  seHackStoreBursts: Boolean,
   seMaxStreamDims: Int,
   seMaxStreamMods: Int,
   seOffsetWidth: Int,
@@ -166,333 +161,24 @@ case class FloatBubbleteaParams(
 ) extends BubbleteaParams[Float]
 
 object CommonBubbleteaParams {
-  val defaultConfig = FloatBubbleteaParams(
-    baseAddress = 0x10080000,
-    dataType = Float(8, 24),
-    meshRows = 2,
-    meshColumns = 2,
-    maxInitiationInterval = 4,
-    maxSimultaneousLoadMacroStreams = 4,
-    maxSimultaneousStoreMacroStreams = 2,
-    maxConfigurationInstructions = 16,
-    seUseSvBlackBox= false,
-    seMaxStreamDims = 4,
-    seMaxStreamMods = 3,
-    seOffsetWidth = 33,
-    seStrideWidth = 32,
-    seSizeWidth = 32,
-    seStreamIdWidth = 32,
-    seLrqNumTables = 16,
-    seLrqNumRequests = 4,
-    seLlbNumTables = 4,
-    seLmmuNumVecs = 4,
-    seSmmuNumAddresses = 32,
-    seMaxNumLoadStreams = 4,
-    seMaxNumStoreStreams = 4,
-    rfSize = 2,
-    rfReadPorts = 2,
-    rfWritePorts = 2,
-    maxDelayIntervals = 4,
-    maxStoreStreamFixedDelay = 16
-  )
-
-  val minimalConfig = UIntBubbleteaParams(
-    baseAddress = 0x10080000,
-    dataType = UInt(8.W),
-    meshRows = 2,
-    meshColumns = 2,
-    maxInitiationInterval = 2,
-    //  not minimal below
-    maxSimultaneousLoadMacroStreams = 2,
-    maxSimultaneousStoreMacroStreams = 2,
-    maxConfigurationInstructions = 16,
-    seUseSvBlackBox= false,
-    seMaxStreamDims = 4,
-    seMaxStreamMods = 3,
-    seOffsetWidth = 33,
-    seStrideWidth = 32,
-    seSizeWidth = 32,
-    seStreamIdWidth = 32,
-    seLrqNumTables = 16,
-    seLrqNumRequests = 2,
-    seLlbNumTables = 4,
-    seLmmuNumVecs = 4,
-    seSmmuNumAddresses = 32,
-    seMaxNumLoadStreams = 4,
-    seMaxNumStoreStreams = 4,
-    rfSize = 2,
-    rfReadPorts = 2,
-    rfWritePorts = 2,
-    maxDelayIntervals = 1,
-    maxStoreStreamFixedDelay = 4
-  )
-
-  val mini2x2 = UIntBubbleteaParams(
-    baseAddress = 0x10080000,
-    dataType = UInt(8.W),
-    meshRows = 2,
-    meshColumns = 2,
-    maxInitiationInterval = 4,
-    //  not minimal below
-    maxSimultaneousLoadMacroStreams = 4,
-    maxSimultaneousStoreMacroStreams = 4, // right now this must be the same as maxSimultaneousLoadMacroStreams
-    maxConfigurationInstructions = 16,
-    seUseSvBlackBox= false,
-    seMaxStreamDims = 4,
-    seMaxStreamMods = 3,
-    seOffsetWidth = 33,
-    seStrideWidth = 32,
-    seSizeWidth = 32,
-    seStreamIdWidth = 32,
-    seLrqNumTables = 16, // II * N * 2
-    seLrqNumRequests = 2,
-    seLlbNumTables = 4,
-    seLmmuNumVecs = 4,
-    seSmmuNumAddresses = 32,
-    seMaxNumLoadStreams = 4,
-    seMaxNumStoreStreams = 4,
-    rfSize = 4,
-    rfReadPorts = 4,
-    rfWritePorts = 4,
-    maxDelayIntervals = 4,
-    maxStoreStreamFixedDelay = 16
-  )
-
   val float4x4 = FloatBubbleteaParams(
     baseAddress = 0x10080000,
     dataType = Float(8, 24),
     meshRows = 4,
     meshColumns = 4,
     maxInitiationInterval = 8,
-    //  not minimal below
-    maxSimultaneousLoadMacroStreams = 4,
-    maxSimultaneousStoreMacroStreams = 4, // right now this must be the same as maxSimultaneousLoadMacroStreams
-    maxConfigurationInstructions = 16,
-    seUseSvBlackBox= true,
-    seMaxStreamDims = 5,
-    seMaxStreamMods = 3,
-    seOffsetWidth = 33,
-    seStrideWidth = 32,
-    seSizeWidth = 32,
-    seStreamIdWidth = 32,
-    seLrqNumTables = 64, // II * N * 2
-    seLrqNumRequests = 2,
-    seLlbNumTables = 4,
-    seLmmuNumVecs = 4,
-    seSmmuNumAddresses = 32,
-    seMaxNumLoadStreams = 4,
-    seMaxNumStoreStreams = 4,
-    rfSize = 4,
-    rfReadPorts = 2,
-    rfWritePorts = 2,
-    maxDelayIntervals = 2,
-    maxStoreStreamFixedDelay = 32
-  )
-
-  val float4x4x16 = FloatBubbleteaParams(
-    baseAddress = 0x10080000,
-    dataType = Float(8, 24),
-    meshRows = 4,
-    meshColumns = 4,
-    maxInitiationInterval = 16,
-    //  not minimal below
     maxSimultaneousLoadMacroStreams = 4,
     maxSimultaneousStoreMacroStreams = 4, // right now this must be the same as maxSimultaneousLoadMacroStreams
     maxConfigurationInstructions = 24,
-    seUseSvBlackBox= true,
+    seUseSvBlackBox = true,
+    seHackStoreBursts = true,
     seMaxStreamDims = 5,
     seMaxStreamMods = 3,
     seOffsetWidth = 33,
     seStrideWidth = 32,
     seSizeWidth = 32,
     seStreamIdWidth = 32,
-    seLrqNumTables = 64, // II * N * 2
-    seLrqNumRequests = 2,
-    seLlbNumTables = 4,
-    seLmmuNumVecs = 4,
-    seSmmuNumAddresses = 32,
-    seMaxNumLoadStreams = 4,
-    seMaxNumStoreStreams = 4,
-    rfSize = 4,
-    rfReadPorts = 2,
-    rfWritePorts = 2,
-    maxDelayIntervals = 2,
-    maxStoreStreamFixedDelay = 32
-  )
-
-  val float4x4MoreLrqTables = FloatBubbleteaParams(
-    baseAddress = 0x10080000,
-    dataType = Float(8, 24),
-    meshRows = 4,
-    meshColumns = 4,
-    maxInitiationInterval = 8,
-    //  not minimal below
-    maxSimultaneousLoadMacroStreams = 4,
-    maxSimultaneousStoreMacroStreams = 4, // right now this must be the same as maxSimultaneousLoadMacroStreams
-    maxConfigurationInstructions = 16,
-    seUseSvBlackBox= false,
-    seMaxStreamDims = 4,
-    seMaxStreamMods = 3,
-    seOffsetWidth = 33,
-    seStrideWidth = 32,
-    seSizeWidth = 32,
-    seStreamIdWidth = 32,
-    seLrqNumTables = 128, // II * N * 2
-    seLrqNumRequests = 2,
-    seLlbNumTables = 4,
-    seLmmuNumVecs = 4,
-    seSmmuNumAddresses = 32,
-    seMaxNumLoadStreams = 4,
-    seMaxNumStoreStreams = 4,
-    rfSize = 4,
-    rfReadPorts = 2,
-    rfWritePorts = 2,
-    maxDelayIntervals = 2,
-    maxStoreStreamFixedDelay = 32
-  )
-
-  val float4x4MoreLrqRequests = FloatBubbleteaParams(
-    baseAddress = 0x10080000,
-    dataType = Float(8, 24),
-    meshRows = 4,
-    meshColumns = 4,
-    maxInitiationInterval = 8,
-    //  not minimal below
-    maxSimultaneousLoadMacroStreams = 4,
-    maxSimultaneousStoreMacroStreams = 4, // right now this must be the same as maxSimultaneousLoadMacroStreams
-    maxConfigurationInstructions = 16,
-    seUseSvBlackBox= false,
-    seMaxStreamDims = 4,
-    seMaxStreamMods = 3,
-    seOffsetWidth = 33,
-    seStrideWidth = 32,
-    seSizeWidth = 32,
-    seStreamIdWidth = 32,
-    seLrqNumTables = 64, // II * N * 2
-    seLrqNumRequests = 4,
-    seLlbNumTables = 4,
-    seLmmuNumVecs = 4,
-    seSmmuNumAddresses = 32,
-    seMaxNumLoadStreams = 4,
-    seMaxNumStoreStreams = 4,
-    rfSize = 4,
-    rfReadPorts = 2,
-    rfWritePorts = 2,
-    maxDelayIntervals = 2,
-    maxStoreStreamFixedDelay = 32
-  )
-
-  val float4x4MoreLlbTables = FloatBubbleteaParams(
-    baseAddress = 0x10080000,
-    dataType = Float(8, 24),
-    meshRows = 4,
-    meshColumns = 4,
-    maxInitiationInterval = 8,
-    //  not minimal below
-    maxSimultaneousLoadMacroStreams = 4,
-    maxSimultaneousStoreMacroStreams = 4, // right now this must be the same as maxSimultaneousLoadMacroStreams
-    maxConfigurationInstructions = 16,
-    seUseSvBlackBox= false,
-    seMaxStreamDims = 4,
-    seMaxStreamMods = 3,
-    seOffsetWidth = 33,
-    seStrideWidth = 32,
-    seSizeWidth = 32,
-    seStreamIdWidth = 32,
-    seLrqNumTables = 64, // II * N * 2
-    seLrqNumRequests = 2,
-    seLlbNumTables = 8,
-    seLmmuNumVecs = 4,
-    seSmmuNumAddresses = 32,
-    seMaxNumLoadStreams = 4,
-    seMaxNumStoreStreams = 4,
-    rfSize = 4,
-    rfReadPorts = 2,
-    rfWritePorts = 2,
-    maxDelayIntervals = 2,
-    maxStoreStreamFixedDelay = 32
-  )
-
-  val float4x4LessLmmuVecs = FloatBubbleteaParams(
-    baseAddress = 0x10080000,
-    dataType = Float(8, 24),
-    meshRows = 4,
-    meshColumns = 4,
-    maxInitiationInterval = 8,
-    //  not minimal below
-    maxSimultaneousLoadMacroStreams = 4,
-    maxSimultaneousStoreMacroStreams = 4, // right now this must be the same as maxSimultaneousLoadMacroStreams
-    maxConfigurationInstructions = 16,
-    seUseSvBlackBox= false,
-    seMaxStreamDims = 4,
-    seMaxStreamMods = 3,
-    seOffsetWidth = 33,
-    seStrideWidth = 32,
-    seSizeWidth = 32,
-    seStreamIdWidth = 32,
-    seLrqNumTables = 64, // II * N * 2
-    seLrqNumRequests = 2,
-    seLlbNumTables = 4,
-    seLmmuNumVecs = 2,
-    seSmmuNumAddresses = 32,
-    seMaxNumLoadStreams = 4,
-    seMaxNumStoreStreams = 4,
-    rfSize = 4,
-    rfReadPorts = 2,
-    rfWritePorts = 2,
-    maxDelayIntervals = 2,
-    maxStoreStreamFixedDelay = 32
-  )
-
-  val float4x4LrqRequests8 = FloatBubbleteaParams(
-    baseAddress = 0x10080000,
-    dataType = Float(8, 24),
-    meshRows = 4,
-    meshColumns = 4,
-    maxInitiationInterval = 8,
-    //  not minimal below
-    maxSimultaneousLoadMacroStreams = 4,
-    maxSimultaneousStoreMacroStreams = 4, // right now this must be the same as maxSimultaneousLoadMacroStreams
-    maxConfigurationInstructions = 16,
-    seUseSvBlackBox= false,
-    seMaxStreamDims = 4,
-    seMaxStreamMods = 3,
-    seOffsetWidth = 33,
-    seStrideWidth = 32,
-    seSizeWidth = 32,
-    seStreamIdWidth = 32,
-    seLrqNumTables = 64, // II * N * 2
-    seLrqNumRequests = 8,
-    seLlbNumTables = 4,
-    seLmmuNumVecs = 4,
-    seSmmuNumAddresses = 32,
-    seMaxNumLoadStreams = 4,
-    seMaxNumStoreStreams = 4,
-    rfSize = 4,
-    rfReadPorts = 2,
-    rfWritePorts = 2,
-    maxDelayIntervals = 2,
-    maxStoreStreamFixedDelay = 32
-  )
-
-  val float4x4LrqRequests16 = FloatBubbleteaParams(
-    baseAddress = 0x10080000,
-    dataType = Float(8, 24),
-    meshRows = 4,
-    meshColumns = 4,
-    maxInitiationInterval = 8,
-    //  not minimal below
-    maxSimultaneousLoadMacroStreams = 4,
-    maxSimultaneousStoreMacroStreams = 4, // right now this must be the same as maxSimultaneousLoadMacroStreams
-    maxConfigurationInstructions = 16,
-    seUseSvBlackBox= false,
-    seMaxStreamDims = 4,
-    seMaxStreamMods = 3,
-    seOffsetWidth = 33,
-    seStrideWidth = 32,
-    seSizeWidth = 32,
-    seStreamIdWidth = 32,
-    seLrqNumTables = 64, // II * N * 2
+    seLrqNumTables = 32,
     seLrqNumRequests = 16,
     seLlbNumTables = 4,
     seLmmuNumVecs = 4,

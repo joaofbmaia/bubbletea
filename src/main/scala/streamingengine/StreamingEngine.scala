@@ -49,7 +49,8 @@ class StreamingEngine(
     val AXI_R_DATA_WIDTH:      Int,
     val AXI_W_DATA_WIDTH:      Int,
     val MAX_NUM_LOAD_STREAMS:  Int,
-    val MAX_NUM_STORE_STREAMS: Int)
+    val MAX_NUM_STORE_STREAMS: Int,
+    val NB_STORE_BURST_BEATS:  Int)
 extends Module {
 
     /* Internal parameters, calculated using external ones */

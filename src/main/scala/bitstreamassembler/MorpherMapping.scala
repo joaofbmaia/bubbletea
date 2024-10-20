@@ -645,7 +645,7 @@ object MorpherMapping extends App {
   val socParams = SocParams(
     cacheLineBytes = 64,
     frontBusAddressBits = 32,
-    frontBusDataBits = 64,
+    frontBusDataBits = 256,
     xLen = 64
   )
   val parser = new MorpherMappingParser(params, socParams)
