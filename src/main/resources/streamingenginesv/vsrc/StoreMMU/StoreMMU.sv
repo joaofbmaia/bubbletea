@@ -169,6 +169,7 @@ module StoreMMU
       hpc_smmu_commit_o <= hpc_commit;
       hpc_smmu_stall_o <= hpc_stall;
       hpc_ops_store_o <= hpc_ops_store;
+      burst_sim <= next_burst_sim;
 
 
 
