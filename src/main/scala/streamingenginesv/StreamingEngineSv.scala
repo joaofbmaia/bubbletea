@@ -1,9 +1,10 @@
 package streamingenginesv
 
 import chisel3._
-import chisel3.util.{HasBlackBoxResource, HasBlackBoxInline}
-import freechips.rocketchip.util.ElaborationArtefacts
-import java.io.FileWriter
+import chisel3.util.HasBlackBoxPath
+import java.io.{File, PrintWriter}
+import scala.io.Source
+import sys.process._
 
 class StreamingEngineSv(
     val STREAM_NUM_DIMS:       Int,
@@ -26,7 +27,7 @@ class StreamingEngineSv(
     val MAX_NUM_LOAD_STREAMS:  Int,
     val MAX_NUM_STORE_STREAMS: Int,
     val NB_STORE_BURST_BEATS:  Int)
-extends BlackBox with HasBlackBoxResource with HasBlackBoxInline {
+extends BlackBox with HasBlackBoxPath {
   /* Internal parameters, calculated using external ones */
   val VEC_NUM_BYTES   = VEC_WIDTH / 8
   val SS_NUM_TABLES   = MAX_NUM_LOAD_STREAMS + MAX_NUM_STORE_STREAMS
@@ -141,18 +142,36 @@ extends BlackBox with HasBlackBoxResource with HasBlackBoxInline {
 
   externalParametersPackageContent.append(s"endpackage\n")
 
-  setInline("auto_external_params_pkg.sv", externalParametersPackageContent.toString())
+  def writeToFileIfChanged(filePath: String, newContent: String): Unit = {
+    val file = new File(filePath)
 
-  addResource("/streamingenginesv/vsrc/StreamingEngineSv.sv")
-  addResource("/streamingenginesv/vsrc/engine_pkg.sv")
-  addResource("/streamingenginesv/vsrc/StreamConfigurator/StreamConfigurator.sv")
-  addResource("/streamingenginesv/vsrc/StreamState/StreamState.sv")
-  addResource("/streamingenginesv/vsrc/StreamState/StreamTables.sv")
-  addResource("/streamingenginesv/vsrc/StreamIterator/StreamIterator.sv")
-  addResource("/streamingenginesv/vsrc/Arbiter/RoundRobinArbiter.sv")
-  addResource("/streamingenginesv/vsrc/LoadMMU/LoadFIFO.sv")
-  addResource("/streamingenginesv/vsrc/LoadMMU/LoadLineBuffer.sv")
-  addResource("/streamingenginesv/vsrc/LoadMMU/LoadMMU.sv")
-  addResource("/streamingenginesv/vsrc/LoadMMU/LoadRequestQueue.sv")
-  addResource("/streamingenginesv/vsrc/StoreMMU/StoreMMU.sv")
+    // Read the existing content from the file (if it exists)
+    val existingContent: String = if (file.exists()) {
+      Source.fromFile(file).mkString
+    } else {
+      ""
+    }
+
+    // Check if the content is the same
+    if (existingContent != newContent) {
+      // Write to the file only if the content is different
+      val writer = new PrintWriter(file)
+      try {
+        writer.write(newContent)
+      } finally {
+        writer.close()
+      }
+    }
+  }
+
+  val chipyardDir = System.getProperty("user.dir")
+  val seVsrcDir = s"$chipyardDir/generators/bubbletea/src/main/resources/streamingenginesv/vsrc"
+
+  writeToFileIfChanged(s"$seVsrcDir/external_params_pkg.sv", externalParametersPackageContent.toString())
+
+  val proc = s"make -C $seVsrcDir default"
+  require (proc.! == 0, "Failed to run preprocessing step")
+
+  // generated from preprocessing step
+  addPath(s"$seVsrcDir/StreamingEngineSv.preprocessed.sv")
 }
