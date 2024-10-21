@@ -36,7 +36,12 @@ class StaticConfigurationMemoryBundle[T <: Data](params: BubbleteaParams[T], soc
 }
 
 class StreamingEngineBytePaddedCompressedConfigurationChannelBundle[T <: Data](params: BubbleteaParams[T], socParams: SocParams) extends Bundle {
-  val padding = UInt(calcAlignPadding((new StreamingEngineCompressedConfigurationChannelBundle(params)).getWidth, socParams.frontBusDataBits).W)
+  val compressedInstructionWidth = (new StreamingEngineCompressedConfigurationChannelBundle(params)).getWidth
+  val compressedInstructionBytes = (compressedInstructionWidth + 7) / 8
+  val compressedInstructionBytesNextPowerOfTwo = roundUpToNextPowerOfTwo(compressedInstructionBytes)
+  val compressedInstructionBytesNextPowerOfTwoBits = compressedInstructionBytesNextPowerOfTwo * 8
+
+  val padding = UInt(calcAlignPadding((new StreamingEngineCompressedConfigurationChannelBundle(params)).getWidth, compressedInstructionBytesNextPowerOfTwoBits).W)
   val compressedInstruction = new StreamingEngineCompressedConfigurationChannelBundle(params)
 }
 
