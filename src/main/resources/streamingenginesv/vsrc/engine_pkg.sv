@@ -2,7 +2,7 @@
 `timescale 1ns / 1ps
 
 package engine_pkg;
-  import auto_external_params_pkg::*;
+  import external_params_pkg::*;
 
   // Stream Configuration Parameters
 

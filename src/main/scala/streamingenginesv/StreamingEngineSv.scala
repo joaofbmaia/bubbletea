@@ -111,7 +111,7 @@ extends BlackBox with HasBlackBoxPath {
 
   // Generate the external parameters package file
   val externalParametersPackageContent = new StringBuilder
-  externalParametersPackageContent.append(s"package auto_external_params_pkg;\n")
+  externalParametersPackageContent.append(s"package external_params_pkg;\n")
   
   val externalParams = Seq(
     ("STREAM_NUM_DIMS", STREAM_NUM_DIMS),
