@@ -600,7 +600,7 @@ class StreamsConfigurationGenerator[T <: Data](params: BubbleteaParams[T], socPa
         }.headOption
       }
       
-      findInMicroStreamsId(loads).orElse(findInMicroStreamsId(stores)).getOrElse(throw new Exception("Value not found in loads or stores"))
+      findInMicroStreamsId(loads).orElse(findInMicroStreamsId(stores)).getOrElse(throw new Exception(s"Value $id not found in loads or stores"))
     }
 
     def singleStreamRemapperMask(micro_pattern: Seq[Option[Int]]) = {
