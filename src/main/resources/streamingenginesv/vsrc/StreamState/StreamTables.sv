@@ -171,6 +171,8 @@ module StreamTables #(
         for (int i = 0; i < STREAM_NUM_DIMS; i++) begin
           if (i <= vec_idx_i) begin
             tables[empty_table_idx].descriptors[i].vectorize <= 1;
+          end else begin
+            tables[empty_table_idx].descriptors[i].vectorize <= 0;
           end
         end
       end
@@ -188,7 +190,6 @@ module StreamTables #(
         tables[empty_table_idx].descriptors[i].iterations <= 0;
         tables[empty_table_idx].descriptors[i].configured <= 0;
         tables[empty_table_idx].descriptors[i].complete <= 0;
-        tables[empty_table_idx].descriptors[i].vectorize <= 0;
       end
 
       for (int i = 0; i < STREAM_NUM_DIMS; i++) begin

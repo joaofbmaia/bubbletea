@@ -367,6 +367,8 @@ extends Module {
             for (i <- 0 until STREAM_NUM_DIMS) {
                 when (i.U <= io.cfg_vec_idx) {
                     st_reg(cfg_empty_idx).dimensions(i).vectorize := true.B
+                } .otherwise {
+                    st_reg(cfg_empty_idx).dimensions(i).vectorize := false.B
                 }
             }
         }
@@ -384,7 +386,6 @@ extends Module {
             d.acc_size   := 0.U
             d.iterations := 0.U
             d.configured := false.B
-            d.vectorize  := false.B
             d.completed  := false.B
         }
             
