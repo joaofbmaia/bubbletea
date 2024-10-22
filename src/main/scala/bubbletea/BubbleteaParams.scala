@@ -169,7 +169,7 @@ object CommonBubbleteaParams {
     maxInitiationInterval = 8,
     maxSimultaneousLoadMacroStreams = 4,
     maxSimultaneousStoreMacroStreams = 4, // right now this must be the same as maxSimultaneousLoadMacroStreams
-    maxConfigurationInstructions = 24,
+    maxConfigurationInstructions = 32,
     seUseSvBlackBox = true,
     seHackStoreBursts = true,
     seMaxStreamDims = 5,
