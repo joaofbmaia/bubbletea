@@ -172,7 +172,7 @@ object CommonBubbleteaParams {
     maxConfigurationInstructions = 32,
     seUseSvBlackBox = true,
     seHackStoreBursts = true,
-    seMaxStreamDims = 5,
+    seMaxStreamDims = 6,
     seMaxStreamMods = 3,
     seOffsetWidth = 33,
     seStrideWidth = 32,
