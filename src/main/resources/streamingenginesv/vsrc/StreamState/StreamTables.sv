@@ -188,6 +188,7 @@ module StreamTables #(
         tables[empty_table_idx].descriptors[i].iterations <= 0;
         tables[empty_table_idx].descriptors[i].configured <= 0;
         tables[empty_table_idx].descriptors[i].complete <= 0;
+        tables[empty_table_idx].descriptors[i].vectorize <= 0;
       end
 
       for (int i = 0; i < STREAM_NUM_DIMS; i++) begin
@@ -307,6 +308,7 @@ module StreamTables #(
         tables[st_idx].descriptors[i].iterations <= '0;
         tables[st_idx].descriptors[i].configured <= '0;
         tables[st_idx].descriptors[i].complete <= '0;
+        tables[st_idx].descriptors[i].vectorize <= '0;
       end
 
       for (int i = 0; i < STREAM_NUM_DIMS; i++) begin

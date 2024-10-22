@@ -384,6 +384,7 @@ extends Module {
             d.acc_size   := 0.U
             d.iterations := 0.U
             d.configured := false.B
+            d.vectorize  := false.B
             d.completed  := false.B
         }
             
@@ -1064,6 +1065,7 @@ extends Module {
             d.acc_size   := 0.U
             d.iterations := 0.U
             d.configured := false.B
+            d.vectorize  := false.B
             d.completed  := false.B
         }
             
