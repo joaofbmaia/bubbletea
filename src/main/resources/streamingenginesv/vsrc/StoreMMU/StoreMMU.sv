@@ -379,10 +379,6 @@ module StoreMMU
   assign next_addr_offset = next_addr[AXI_W_OFFSET_WIDTH-1:0];
 
 
-  logic [$clog2(SMMU_NUM_ADDRESSES)-1:0] last_addr_ptr;
-
-  assign last_addr_ptr = store_r_addr_ptr == 5'b11111 ? '0 : store_r_addr_ptr + 1;
-
   assign clear_mmu_resources = store_fifo_table[store_sel_idx].ss_done &&
                                 store_fifo_table[store_sel_idx].valid &&
                                 !store_fifo_table[store_sel_idx].addressFIFO[store_r_addr_ptr].valid;
