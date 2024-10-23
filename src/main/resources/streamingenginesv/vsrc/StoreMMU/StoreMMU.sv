@@ -385,7 +385,7 @@ module StoreMMU
 
   assign clear_mmu_resources = store_fifo_table[store_sel_idx].ss_done &&
                                 store_fifo_table[store_sel_idx].valid &&
-                                !store_fifo_table[store_sel_idx].addressFIFO[last_addr_ptr].valid;
+                                !store_fifo_table[store_sel_idx].addressFIFO[store_r_addr_ptr].valid;
 
   assign rd_done_o = clear_mmu_resources;
   assign rd_store_request_successful_o = store_state == WAIT_PAIR;
