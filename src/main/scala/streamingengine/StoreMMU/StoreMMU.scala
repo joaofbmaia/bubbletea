@@ -576,7 +576,7 @@ extends Module {
 			 * and issue one final request in there is valid buffered data
 			 */
 			val clear_mmu_resources = Wire(Bool())
-			clear_mmu_resources := sf_reg(store_sel_idx).ss_done && sf_reg(store_sel_idx).valid && !sf_reg(store_sel_idx).addressFIFO(store_r_addr_ptr + 1.U).valid
+			clear_mmu_resources := sf_reg(store_sel_idx).ss_done && sf_reg(store_sel_idx).valid && !sf_reg(store_sel_idx).addressFIFO(store_r_addr_ptr).valid
 			
 			when (clear_mmu_resources) {
 
