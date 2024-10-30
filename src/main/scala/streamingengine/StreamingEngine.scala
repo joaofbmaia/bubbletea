@@ -203,7 +203,8 @@ extends Module {
         STREAM_ID_WIDTH, 
         ADDRESS_WIDTH, 
         VEC_NUM_BYTES,
-        AXI_W_DATA_WIDTH))
+        AXI_W_DATA_WIDTH,
+        NB_STORE_BURST_BEATS))
 
 
 

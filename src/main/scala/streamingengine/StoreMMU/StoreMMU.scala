@@ -97,7 +97,8 @@ class StoreMMU(
 		val STREAM_ID_WIDTH:	Int,
 		val ADDRESS_WIDTH: 		Int,
 		val VEC_NUM_BYTES: 		Int,
-		val AXI_W_DATA_WIDTH: 	Int)
+		val AXI_W_DATA_WIDTH: 	Int,
+		val NB_STORE_BURST_BEATS: Int)
 extends Module {
     
 	/* Internal parameters, calculated using external ones */
@@ -207,6 +208,9 @@ extends Module {
 	val buffer_strb		= Reg(Vec(AXI_W_NUM_BYTES, UInt(1.W)))
 	val buffer_addr_tag = Reg(UInt(AXI_W_TAG_WIDTH.W))
 	val buffer_valid 	= Reg(Bool())
+
+	/* Burst Sim Hack */
+	val burst_sim = Reg(UInt(8.W))
 
 	/* Performance Counters */
 	val hpc_smmu_commit = Reg(UInt(64.W))
@@ -468,8 +472,22 @@ extends Module {
 				/* There is a valid address being buffered and a different one was received */
 				when (buffer_valid && buffer_addr_tag =/= next_addr_tag) {
 
-					/* Jump to the next state, where the store request will be resolved */
-					store_state := STATE_WAIT_AWREADY
+					/* Pretend we can burst, by only actually sending last beat */
+					when (burst_sim === NB_STORE_BURST_BEATS.U) {
+						burst_sim := 0.U
+
+						/* Jump to the next state, where the store request will be resolved */
+						store_state := STATE_WAIT_AWREADY
+					} .otherwise {
+						/* Free the buffers */
+						buffer_data.foreach {x => x := 0.U}
+						buffer_strb.foreach {x => x := 0.U}
+						buffer_addr_tag := 0.U
+						buffer_valid 	:= false.B
+
+						burst_sim := burst_sim + 1.U
+						store_state := STATE_WAIT_PAIR
+					}					
 
 				}
 				.otherwise {
