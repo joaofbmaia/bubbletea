@@ -796,6 +796,8 @@ extends Module {
 		buffer_addr_tag := 0.U
 		buffer_valid 	:= false.B
 
+		burst_sim := 0.U
+
 		hpc_smmu_commit := 0.U
 		hpc_smmu_stall  := 0.U
 		hpc_ops_store 	:= 0.U
