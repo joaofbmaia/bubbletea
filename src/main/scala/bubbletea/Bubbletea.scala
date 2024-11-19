@@ -46,7 +46,7 @@ class Bubbletea[T <: Data: Arithmetic](params: BubbleteaParams[T])(implicit p: P
         cacheLineBytes = p(FrontBusKey).blockBytes,
         frontBusAddressBits = 0, // the controller does not use this field
         frontBusDataBits = p(FrontBusKey).beatBytes * 8,
-        xLen = p(XLen)
+        xLen = p(MaxXLen)
     )
 
     // Controller
@@ -67,7 +67,7 @@ class Bubbletea[T <: Data: Arithmetic](params: BubbleteaParams[T])(implicit p: P
             cacheLineBytes = p(FrontBusKey).blockBytes,
             frontBusAddressBits = seAxiNode.out.head._1.params.addrBits,
             frontBusDataBits = p(FrontBusKey).beatBytes * 8,
-            xLen = p(XLen)
+            xLen = p(MaxXLen)
         )
 
         // Control Registers

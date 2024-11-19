@@ -2,6 +2,7 @@ package bubbletea
 
 import chisel3._
 import org.chipsalliance.cde.config.Field
+import freechips.rocketchip.subsystem.{BaseSubsystem, SBUS, PBUS}
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
 import freechips.rocketchip.subsystem.BaseSubsystem
@@ -13,6 +14,8 @@ case object FloatBubbleteaKey extends Field[Option[FloatBubbleteaParams]](None)
 trait CanHavePeripheryUIntBubbletea { this: BaseSubsystem =>
   p(UIntBubbleteaKey).map { params =>
     // assumes pbus/sbus/ibus are on the same clock
+    val sbus = locateTLBusWrapper(SBUS)
+    val pbus = locateTLBusWrapper(PBUS)
     val bubbleteaDomain = sbus.generateSynchronousDomain
     bubbleteaDomain {
       val bubbletea = LazyModule(new Bubbletea(params))
@@ -25,6 +28,8 @@ trait CanHavePeripheryUIntBubbletea { this: BaseSubsystem =>
 trait CanHavePeripherySIntBubbletea { this: BaseSubsystem =>
   p(SIntBubbleteaKey).map { params =>
     // assumes pbus/sbus/ibus are on the same clock
+    val sbus = locateTLBusWrapper(SBUS)
+    val pbus = locateTLBusWrapper(PBUS)
     val bubbleteaDomain = sbus.generateSynchronousDomain
     bubbleteaDomain {
       val bubbletea = LazyModule(new Bubbletea(params))
@@ -37,6 +42,8 @@ trait CanHavePeripherySIntBubbletea { this: BaseSubsystem =>
 trait CanHavePeripheryFloatBubbletea { this: BaseSubsystem =>
   p(FloatBubbleteaKey).map { params =>
     // assumes pbus/sbus/ibus are on the same clock
+    val sbus = locateTLBusWrapper(SBUS)
+    val pbus = locateTLBusWrapper(PBUS)
     val bubbleteaDomain = sbus.generateSynchronousDomain
     bubbleteaDomain {
       val bubbletea = LazyModule(new Bubbletea(params))
