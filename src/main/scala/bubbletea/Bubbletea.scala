@@ -29,7 +29,8 @@ class Bubbletea[T <: Data: Arithmetic](params: BubbleteaParams[T])(implicit p: P
         masters = Seq(AXI4MasterParameters(
             name = "bubbletea-streaming",
             id = IdRange(0, 1),
-            maxFlight = Some(1)
+            maxFlight = Some(1),
+            aligned = true
         ))
     )))
 
@@ -38,7 +39,7 @@ class Bubbletea[T <: Data: Arithmetic](params: BubbleteaParams[T])(implicit p: P
     seNode := 
         AXI4ToTL() := 
         AXI4UserYanker(Some(1)) :=
-        AXI4Fragmenter() :=
+        //AXI4Fragmenter() :=
         seAxiNode
 
 
