@@ -2,7 +2,7 @@ package bubbletea
 
 import chisel3._
 import org.chipsalliance.cde.config.Field
-import freechips.rocketchip.subsystem.{BaseSubsystem, SBUS, PBUS}
+import freechips.rocketchip.subsystem.{BaseSubsystem, SBUS, FBUS, PBUS}
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
 import freechips.rocketchip.subsystem.BaseSubsystem
@@ -15,6 +15,7 @@ trait CanHavePeripheryUIntBubbletea { this: BaseSubsystem =>
   p(UIntBubbleteaKey).map { params =>
     // assumes pbus/sbus/ibus are on the same clock
     val sbus = locateTLBusWrapper(SBUS)
+    val fbus = locateTLBusWrapper(FBUS)
     val pbus = locateTLBusWrapper(PBUS)
     val bubbleteaDomain = sbus.generateSynchronousDomain
     bubbleteaDomain {
@@ -29,6 +30,7 @@ trait CanHavePeripherySIntBubbletea { this: BaseSubsystem =>
   p(SIntBubbleteaKey).map { params =>
     // assumes pbus/sbus/ibus are on the same clock
     val sbus = locateTLBusWrapper(SBUS)
+    val fbus = locateTLBusWrapper(FBUS)
     val pbus = locateTLBusWrapper(PBUS)
     val bubbleteaDomain = sbus.generateSynchronousDomain
     bubbleteaDomain {
@@ -43,6 +45,7 @@ trait CanHavePeripheryFloatBubbletea { this: BaseSubsystem =>
   p(FloatBubbleteaKey).map { params =>
     // assumes pbus/sbus/ibus are on the same clock
     val sbus = locateTLBusWrapper(SBUS)
+    val fbus = locateTLBusWrapper(FBUS)
     val pbus = locateTLBusWrapper(PBUS)
     val bubbleteaDomain = sbus.generateSynchronousDomain
     bubbleteaDomain {

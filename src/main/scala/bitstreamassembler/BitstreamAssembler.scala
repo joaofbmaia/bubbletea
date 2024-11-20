@@ -3,7 +3,6 @@ package bitstreamassembler
 import bubbletea._
 import chisel3._
 import chisel3.simulator.EphemeralSimulator._
-import org.scalatest.flatspec.AnyFlatSpec
 import circt.stage.ChiselStage
 import chisel3.experimental.BundleLiterals._
 import chisel3.experimental.VecLiterals._
@@ -12,8 +11,8 @@ import upickle.default._
 import scala.io.Source
 import scala.collection.mutable.ArrayBuffer
 
-class BitstreamAssember[T <: Data](configurationFile: String, kernelName: String, params: BubbleteaParams[T], socParams: SocParams) extends AnyFlatSpec with ChiselScalatestTester {
-  "BitstreamAssembler" should  "generate binary file with bitstream" in {
+class BitstreamAssember[T <: Data](configurationFile: String, kernelName: String, params: BubbleteaParams[T], socParams: SocParams) {
+  def assemble() = {
     simulate(new Module { 
       val io = IO(new Bundle {
         val in = Input(new BitstreamBundle(params, socParams))
@@ -257,5 +256,5 @@ object BitstreamAssembler extends App {
     frontBusDataBits = 256,
     xLen = 64
   )
-  org.scalatest.run(new BitstreamAssember(configurationFile, kernelName, params, socParams))
+  (new BitstreamAssember(configurationFile, kernelName, params, socParams)).assemble()
 }
