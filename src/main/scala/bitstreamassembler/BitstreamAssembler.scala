@@ -2,7 +2,8 @@ package bitstreamassembler
 
 import bubbletea._
 import chisel3._
-//import chisel3.simulator.EphemeralSimulator._
+import chiseltest._
+import org.scalatest.flatspec.AnyFlatSpec
 import circt.stage.ChiselStage
 import chisel3.experimental.BundleLiterals._
 import chisel3.experimental.VecLiterals._
@@ -11,20 +12,9 @@ import upickle.default._
 import scala.io.Source
 import scala.collection.mutable.ArrayBuffer
 
-import chisel3.simulator._
-import svsim._
-
-class VerilatorSimulator(val workspacePath: String) extends SingleBackendSimulator[verilator.Backend] {
-  val backend = verilator.Backend.initializeFromProcessEnvironment()
-  val tag = "verilator"
-  val commonCompilationSettings = CommonCompilationSettings()
-  val backendSpecificCompilationSettings = verilator.Backend.CompilationSettings()
-}
-
-class BitstreamAssember[T <: Data](configurationFile: String, kernelName: String, params: BubbleteaParams[T], socParams: SocParams) {
-  def assemble() = {
-    val simulator = new VerilatorSimulator("test_run_dir/simulator/BitstreamAssembler")
-    simulator.simulate(new Module { 
+class BitstreamAssember[T <: Data](configurationFile: String, kernelName: String, params: BubbleteaParams[T], socParams: SocParams) extends AnyFlatSpec with ChiselScalatestTester {
+  "BitstreamAssembler" should  "generate binary file with bitstream" in {
+    test(new Module { 
       val io = IO(new Bundle {
         val in = Input(new BitstreamBundle(params, socParams))
         val out = Output(UInt(in.getWidth.W))
@@ -37,16 +27,13 @@ class BitstreamAssember[T <: Data](configurationFile: String, kernelName: String
       })
       io.sizeBytes := io.in.getWidth.U / 8.U
       io.out := io.in.asUInt
-    }) {module => 
-
-      import PeekPokeAPI._
-      val dut = module.wrapped
+    }) {dut => 
 
       val jsonConfiguration = Source.fromFile(configurationFile).getLines().mkString
       val configurationData = read[ConfigurationData](jsonConfiguration)
 
       // Configuration Mapping
-      {        
+      {
         dut.io.in.padding0.poke(0.U)
         dut.io.in.padding1.poke(0.U)
 
@@ -256,13 +243,11 @@ class BitstreamAssember[T <: Data](configurationFile: String, kernelName: String
       outC.write(cArray)
       outC.close()
     }
-    println("Done!")
   }
 }
 
 object BitstreamAssembler extends App {
-  //val baseDirectory = args(0)
-  val baseDirectory = "./xbitstreams/jacobi_1d"
+  val baseDirectory = args(0)
   val configurationFile = s"$baseDirectory/configuration.json"
   val kernelName = baseDirectory.split("/").last
   val params = CommonBubbleteaParams.float4x4
@@ -272,5 +257,5 @@ object BitstreamAssembler extends App {
     frontBusDataBits = 256,
     xLen = 64
   )
-  (new BitstreamAssember(configurationFile, kernelName, params, socParams)).assemble()
+  org.scalatest.run(new BitstreamAssember(configurationFile, kernelName, params, socParams))
 }
