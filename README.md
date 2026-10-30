@@ -6,8 +6,10 @@ BubbleTea is a coarse-grained reconfigurable array (CGRA) whose processing eleme
 
 The accelerator plugs into a [Chipyard](https://github.com/ucb-bar/chipyard) Rocket Chip SoC as a memory-mapped peripheral that shares the system bus and L2 with the host core.
 
-This is the hardware from my MSc thesis at Instituto Superior Técnico / INESC-ID and from the paper:
+This is the hardware from my MSc thesis at Instituto Superior Técnico / INESC-ID and from the accompanying paper:
 
+> J. Maia, **"Stream-based Coarse-Grained Reconfigurable Accelerator"**, MSc thesis, Instituto Superior Técnico, 2025. Supervised by P. Tomás and N. Roma. [[Record]](https://scholar.tecnico.ulisboa.pt/records/q6Wju__CshOqaxesH3UP-CUDHal3EJJy20WS) [[PDF]](https://scholar.tecnico.ulisboa.pt/api/records/q6Wju__CshOqaxesH3UP-CUDHal3EJJy20WS/file/14a4768311b9258c6883ac82405e130e8df23b1b5560c0ca9e6b9eb3461c8d2e.pdf)
+>
 > J. Maia, A. Silveira, G. Midões, N. Neves, P. Tomás, N. Roma, **"Stream-Driven Acceleration for Embedded RISC-V SoCs"**, IEEE ISCAS 2025. [[IEEE Xplore]](https://ieeexplore.ieee.org/document/11043244/)
 
 ## Architecture
