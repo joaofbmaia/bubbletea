@@ -30,9 +30,14 @@ Each PE has a floating-point functional unit, a small register file and a crossb
 
 ### Execution model
 
-![Spatio-temporal mapping](docs/img/3dmapping.png)
+<table>
+  <tr>
+    <td align="center" valign="top" width="50%"><img src="docs/img/3dmapping.png" alt="Spatio-temporal mapping of the dataflow graph"><br><sub>Mapping: each operation gets a PE and a cycle within one II</sub></td>
+    <td align="center" valign="top" width="50%"><img src="docs/img/execution.png" alt="Overlapped execution of loop iterations"><br><sub>Execution: a new iteration starts every II cycles, overlapping the previous ones</sub></td>
+  </tr>
+</table>
 
-The loop body is unrolled into a dataflow graph and mapped onto the mesh in space and time: each operation is assigned a PE and a cycle within a repeating schedule of length II (the initiation interval). Values move between operations over PE-to-PE links or wait in registers. In steady state, a new loop iteration starts every II cycles while the streaming engine keeps the operands coming.
+The loop body is unrolled into a dataflow graph and mapped onto the mesh in space and time: each operation is assigned a PE and a cycle within a repeating schedule of length II (the initiation interval). Values move between operations over PE-to-PE links or wait in registers. In steady state, a new loop iteration starts every II cycles, so several iterations are in flight at once (right), while the streaming engine keeps the operands coming.
 
 ### Streaming engine
 
