@@ -1,105 +1,67 @@
-Chisel Project Template
-=======================
+# BubbleTea
 
-You've done the [Chisel Bootcamp](https://github.com/freechipsproject/chisel-bootcamp), and now you
-are ready to start your own Chisel project.  The following procedure should get you started
-with a clean running [Chisel3](https://www.chisel-lang.org/) project.
+**A stream-driven CGRA accelerator for RISC-V SoCs, written in Chisel.**
 
-## Make your own Chisel3 project
+BubbleTea is a coarse-grained reconfigurable array (CGRA) whose processing elements only compute. All memory access is moved to a dedicated **streaming engine** that implements the stream model of the RISC-V Unlimited Vector Extension (UVE). Kernels are described as loop nests. The compiler turns each one into a set of data-stream descriptors (what to load and store) and a dataflow graph (what to compute). The streaming engine walks the descriptors and feeds the array, and the array executes the graph on a modulo schedule.
 
-### Dependencies
+The accelerator plugs into a [Chipyard](https://github.com/ucb-bar/chipyard) Rocket Chip SoC as a memory-mapped peripheral that shares the system bus and L2 with the host core.
 
-#### JDK 8 or newer
+This is the hardware from my MSc thesis at Instituto Superior Técnico / INESC-ID and from the paper:
 
-We recommend LTS releases Java 8 and Java 11. You can install the JDK as recommended by your operating system, or use the prebuilt binaries from [AdoptOpenJDK](https://adoptopenjdk.net/).
+> J. Maia, A. Silveira, G. Midões, N. Neves, P. Tomás, N. Roma, **"Stream-Driven Acceleration for Embedded RISC-V SoCs"**, IEEE ISCAS 2025. [[IEEE Xplore]](https://ieeexplore.ieee.org/document/11043244/)
 
-#### SBT or mill
+## Architecture
 
-SBT is the most common built tool in the Scala community. You can download it [here](https://www.scala-sbt.org/download.html).  
-mill is another Scala/Java build tool without obscure DSL like SBT. You can download it [here](https://github.com/com-lihaoyi/mill/releases)
+![Accelerator microarchitecture](docs/img/arch.png)
 
-### How to get started
+The accelerator has four parts:
 
-#### Create a repository from the template
+- **Streaming engine:** decodes UVE-style stream descriptors (multi-dimensional affine access patterns) and generates addresses. It fetches whole cache lines, reorders out-of-order responses and assembles stream vectors in the load stream registers. Store streams flow back the same way.
+- **Stream remappers:** permutation networks (Beneš) that scatter each stream vector into the per-port *micro-streams* the array expects, and gather results back into store streams.
+- **Skew synchronizers:** delay lines that line up micro-streams, which arrive at different array ports at different cycles of the schedule.
+- **CGRA mesh:** a 2-D grid of processing elements, fed at its edges.
+- **Controller:** holds the configuration, loads new bitstreams while the current kernel runs, and exposes control/status registers to the host.
 
-This repository is a Github template. You can create your own repository from it by clicking the green `Use this template` in the top right.
-Please leave `Include all branches` **unchecked**; checking it will pollute the history of your new repository.
-For more information, see ["Creating a repository from a template"](https://docs.github.com/en/free-pro-team@latest/github/creating-cloning-and-archiving-repositories/creating-a-repository-from-a-template).
+### Processing elements
 
-#### Wait for the template cleanup workflow to complete
+![Mesh and processing element](docs/img/mesh_and_pe.png)
 
-After using the template to create your own blank project, please wait a minute or two for the `Template cleanup` workflow to run which will removes some template-specific stuff from the repository (like the LICENSE).
-Refresh the repository page in your browser until you see a 2nd commit by `actions-user` titled `Template cleanup`.
+Each PE has a floating-point functional unit, a small register file and a crossbar to its four neighbours. Its behaviour in each cycle of the modulo schedule comes from its configuration word. The mesh size, data type, register file size and ports, and maximum initiation interval are all generator parameters. The reference configuration is a 4×4 FP32 mesh.
 
+### Execution model
 
-#### Clone your repository
+![Spatio-temporal mapping](docs/img/3dmapping.png)
 
-Once you have created a repository from this template and the `Template cleanup` workflow has completed, you can click the green button to get a link for cloning your repository.
-Note that it is easiest to push to a repository if you set up SSH with Github, please see the [related documentation](https://docs.github.com/en/free-pro-team@latest/github/authenticating-to-github/connecting-to-github-with-ssh). SSH is required for pushing to a Github repository when using two-factor authentication.
+The loop body is unrolled into a dataflow graph and mapped onto the mesh in space and time: each operation is assigned a PE and a cycle within a repeating schedule of length II (the initiation interval). Values move between operations over PE-to-PE links or wait in registers. In steady state, a new loop iteration starts every II cycles while the streaming engine keeps the operands coming.
 
-```sh
-git clone git@github.com:joaofbmaia/bubbletea.git
-cd bubbletea
+### Streaming engine
+
+![Streaming engine](docs/img/se.png)
+
+## Toolchain and system
+
+![Complete system](docs/img/complete_system.png)
+
+Kernels are compiled with **[StreamFlow](https://github.com/joaofbmaia/streamflow)**. It takes an annotated C loop nest and produces the bitstream and host code. The integration into Chipyard (configs, software and simulation flow) lives in **[chipyard-bubbletea](https://github.com/joaofbmaia/chipyard-bubbletea)**.
+
+## Repository layout
+
+| Path | Contents |
+|---|---|
+| `src/main/scala/bubbletea/` | Accelerator RTL: mesh, PEs, remappers, delay lines, controller, Chipyard periphery |
+| `src/main/scala/streamingengine/` | Streaming engine (Chisel) |
+| `src/main/resources/streamingenginesv/` | Streaming engine (SystemVerilog version, used as a black box) |
+| `src/main/scala/bitstreamassembler/` | Bitstream assembler: turns mapper output and stream descriptors into a configuration bitstream |
+
+## Building
+
+BubbleTea is built as part of Chipyard, using the [chipyard-bubbletea](https://github.com/joaofbmaia/chipyard-bubbletea) fork, `bubbletea` branch:
+
+```bash
+cd sims/verilator
+make CONFIG=Bubbletea4x4x8Fp32Config
 ```
 
-#### Set project organization and name in build.sbt
+`Bubbletea4x4x8Fp32Config` is a Rocket SoC with a 4×4 FP32 BubbleTea and a maximum II of 8. `Bubbletea4x4x16Fp32Config` raises the maximum II to 16.
 
-The cleanup workflow will have attempted to provide sensible defaults for `ThisBuild / organization` and `name` in the `build.sbt`.
-Feel free to use your text editor of choice to change them as you see fit.
-
-#### Clean up the README.md file
-
-Again, use you editor of choice to make the README specific to your project.
-
-#### Add a LICENSE file
-
-It is important to have a LICENSE for open source (or closed source) code.
-This template repository has the Unlicense in order to allow users to add any license they want to derivative code.
-The Unlicense is stripped when creating a repository from this template so that users do not accidentally unlicense their own work.
-
-For more information about a license, check out the [Github Docs](https://docs.github.com/en/free-pro-team@latest/github/building-a-strong-community/adding-a-license-to-a-repository).
-
-#### Commit your changes
-```sh
-git commit -m 'Starting bubbletea'
-git push origin main
-```
-
-### Did it work?
-
-You should now have a working Chisel3 project.
-
-You can run the included test with:
-```sh
-sbt test
-```
-
-Alternatively, if you use Mill:
-```sh
-mill bubbletea.test
-```
-
-You should see a whole bunch of output that ends with something like the following lines
-```
-[info] Tests: succeeded 1, failed 0, canceled 0, ignored 0, pending 0
-[info] All tests passed.
-[success] Total time: 5 s, completed Dec 16, 2020 12:18:44 PM
-```
-If you see the above then...
-
-### It worked!
-
-You are ready to go. We have a few recommended practices and things to do.
-
-* Use packages and following conventions for [structure](https://www.scala-sbt.org/1.x/docs/Directories.html) and [naming](http://docs.scala-lang.org/style/naming-conventions.html)
-* Package names should be clearly reflected in the testing hierarchy
-* Build tests for all your work
-* Read more about testing in SBT in the [SBT docs](https://www.scala-sbt.org/1.x/docs/Testing.html)
-* This template includes a [test dependency](https://www.scala-sbt.org/1.x/docs/Library-Dependencies.html#Per-configuration+dependencies) on [chiseltest](https://github.com/ucb-bar/chisel-testers2), this is a reasonable starting point for most tests
-  * You can remove this dependency in the build.sbt file if you want to
-* Change the name of your project in the build.sbt file
-* Change your README.md
-
-## Problems? Questions?
-
-Check out the [Chisel Users Community](https://www.chisel-lang.org/community.html) page for links to get in contact!
+The generator is built through Chipyard's `build.sbt`; this repository is not a standalone sbt project.
